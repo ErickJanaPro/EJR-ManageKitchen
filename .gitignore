@@ -8,3 +8,10 @@ build/
 *.class
 
 .DS_Store
+
+# Metals / Scala
+.metals/
+.bloop/
+
+# BSP
+.bsp/
