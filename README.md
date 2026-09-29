@@ -1,1 +1,1 @@
-# EJR-Commerce
+# EJR-ManageKitchen
