@@ -51,3 +51,5 @@ AVERTISSEMENT: Unmatched cancel notification for request id 8
 2026.09.29 14:14:22 INFO  no build target found for /Users/erick/Desktop/MIASHS/M1/S1/ProjetWeb/Projet/app/src/main/java/org/example/App.java. Using fallback presentation compiler.
 2026.09.29 14:14:22 INFO  no build target found for /Users/erick/Desktop/MIASHS/M1/S1/ProjetWeb/Projet/app/src/main/java/org/example/App.java. Using fallback presentation compiler.
 2026.09.29 14:14:22 INFO  no build target found for /Users/erick/Desktop/MIASHS/M1/S1/ProjetWeb/Projet/app/src/main/java/org/example/App.java. Using fallback presentation compiler.
+sept. 29, 2026 2:19:02 PM org.eclipse.lsp4j.jsonrpc.services.GenericEndpoint notify
+INFOS: Unsupported notification method: $/setTrace
