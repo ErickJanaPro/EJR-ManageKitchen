@@ -1,0 +1,15 @@
+services:
+  db:
+    image: postgres:16
+    container_name: ejr-postgres
+    environment:
+      POSTGRES_DB: ejr_kitchen
+      POSTGRES_USER: ejr
+      POSTGRES_PASSWORD: ejr
+    ports:
+      - "5432:5432"
+    volumes:
+      - ejr-pgdata:/var/lib/postgresql/data
+
+volumes:
+  ejr-pgdata:

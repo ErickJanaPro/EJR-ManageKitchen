@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="fr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SupplierController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">EJR-ManageKitchen</a> &gt; <a href="index.source.html" class="el_package">com.restaurant.supplychain.web</a> &gt; <span class="el_source">SupplierController.java</span></div><h1>SupplierController.java</h1><pre class="source lang-java linenums">package com.restaurant.supplychain.web;
+
+import com.restaurant.supplychain.service.SupplierService;
+import com.restaurant.supplychain.web.dto.IngredientRequest;
+import com.restaurant.supplychain.web.dto.IngredientResponse;
+import com.restaurant.supplychain.web.dto.SupplierRequest;
+import com.restaurant.supplychain.web.dto.SupplierResponse;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping(&quot;/api/suppliers&quot;)
+public class SupplierController {
+
+    private final SupplierService service;
+
+<span class="fc" id="L20">    public SupplierController(SupplierService service) {</span>
+<span class="fc" id="L21">        this.service = service;</span>
+<span class="fc" id="L22">    }</span>
+
+    @GetMapping
+    public List&lt;SupplierResponse&gt; list() {
+<span class="fc" id="L26">        return service.findAll().stream().map(SupplierResponse::from).toList();</span>
+    }
+
+    @GetMapping(&quot;/{id}&quot;)
+    public SupplierResponse get(@PathVariable Long id) {
+<span class="nc" id="L31">        return SupplierResponse.from(service.get(id));</span>
+    }
+
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    public SupplierResponse create(@Valid @RequestBody SupplierRequest request) {
+<span class="fc" id="L37">        return SupplierResponse.from(service.create(request));</span>
+    }
+
+    @PutMapping(&quot;/{id}&quot;)
+    public SupplierResponse update(@PathVariable Long id, @Valid @RequestBody SupplierRequest request) {
+<span class="nc" id="L42">        return SupplierResponse.from(service.update(id, request));</span>
+    }
+
+    @DeleteMapping(&quot;/{id}&quot;)
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@PathVariable Long id) {
+<span class="nc" id="L48">        service.delete(id);</span>
+<span class="nc" id="L49">    }</span>
+
+    @GetMapping(&quot;/{id}/ingredients&quot;)
+    public List&lt;IngredientResponse&gt; ingredients(@PathVariable Long id) {
+<span class="fc" id="L53">        return service.ingredientsOf(id).stream().map(IngredientResponse::from).toList();</span>
+    }
+
+    @PostMapping(&quot;/{id}/ingredients&quot;)
+    @ResponseStatus(HttpStatus.CREATED)
+    public IngredientResponse addIngredient(@PathVariable Long id, @Valid @RequestBody IngredientRequest request) {
+<span class="fc" id="L59">        return IngredientResponse.from(service.addIngredient(id, request));</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
