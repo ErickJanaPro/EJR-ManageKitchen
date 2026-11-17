@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="fr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SupplierService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">EJR-ManageKitchen</a> &gt; <a href="index.source.html" class="el_package">com.restaurant.supplychain.service</a> &gt; <span class="el_source">SupplierService.java</span></div><h1>SupplierService.java</h1><pre class="source lang-java linenums">package com.restaurant.supplychain.service;
+
+import com.restaurant.supplychain.domain.Ingredient;
+import com.restaurant.supplychain.domain.Supplier;
+import com.restaurant.supplychain.repository.IngredientRepository;
+import com.restaurant.supplychain.repository.SupplierRepository;
+import com.restaurant.supplychain.web.dto.IngredientRequest;
+import com.restaurant.supplychain.web.dto.SupplierRequest;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+
+@Service
+@Transactional
+public class SupplierService {
+
+    private final SupplierRepository suppliers;
+    private final IngredientRepository ingredients;
+
+<span class="fc" id="L21">    public SupplierService(SupplierRepository suppliers, IngredientRepository ingredients) {</span>
+<span class="fc" id="L22">        this.suppliers = suppliers;</span>
+<span class="fc" id="L23">        this.ingredients = ingredients;</span>
+<span class="fc" id="L24">    }</span>
+
+    @Transactional(readOnly = true)
+    public List&lt;Supplier&gt; findAll() {
+<span class="fc" id="L28">        return suppliers.findAll();</span>
+    }
+
+    @Transactional(readOnly = true)
+    public Supplier get(Long id) {
+<span class="fc" id="L33">        return suppliers.findById(id)</span>
+<span class="fc" id="L34">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Fournisseur introuvable : &quot; + id));</span>
+    }
+
+    public Supplier create(SupplierRequest r) {
+<span class="fc bfc" id="L38" title="All 2 branches covered.">        if (suppliers.existsByNameIgnoreCase(r.name())) {</span>
+<span class="fc" id="L39">            throw new DuplicateResourceException(&quot;Un fournisseur nommé '&quot; + r.name() + &quot;' existe déjà&quot;);</span>
+        }
+<span class="fc" id="L41">        return suppliers.save(new Supplier(r.name(), r.email(), r.phone(), r.address()));</span>
+    }
+
+    public Supplier update(Long id, SupplierRequest r) {
+<span class="nc" id="L45">        Supplier s = get(id);</span>
+<span class="nc" id="L46">        s.update(r.name(), r.email(), r.phone(), r.address());</span>
+<span class="nc" id="L47">        return s;</span>
+    }
+
+    public void delete(Long id) {
+<span class="nc bnc" id="L51" title="All 2 branches missed.">        if (!ingredients.findBySupplierId(id).isEmpty()) {</span>
+<span class="nc" id="L52">            throw new DuplicateResourceException(</span>
+                    &quot;Suppression impossible : des ingrédients sont rattachés à ce fournisseur&quot;);
+        }
+<span class="nc" id="L55">        suppliers.delete(get(id));</span>
+<span class="nc" id="L56">    }</span>
+
+    @Transactional(readOnly = true)
+    public List&lt;Ingredient&gt; ingredientsOf(Long supplierId) {
+<span class="fc" id="L60">        get(supplierId);</span>
+<span class="fc" id="L61">        return ingredients.findBySupplierId(supplierId);</span>
+    }
+
+    public Ingredient addIngredient(Long supplierId, IngredientRequest r) {
+<span class="fc" id="L65">        Supplier s = get(supplierId);</span>
+<span class="fc" id="L66">        return ingredients.save(new Ingredient(r.name(), r.unit(), r.unitPrice(), s));</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
