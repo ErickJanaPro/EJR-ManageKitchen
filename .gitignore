@@ -1,17 +1,24 @@
+# Gradle / build
 .gradle/
 build/
 **/build/
-
+# Maven (interdit dans ce projet, voir CONTRIBUTING.md)
+target/
+# Sorties des IDE (VS Code / Eclipse génèrent bin/)
+bin/
+**/bin/
+out/
 .idea/
 *.iml
-
+.vscode/
+.settings/
+.project
+.classpath
 *.class
-
-.DS_Store
-
-# Metals / Scala
+# Metals / Scala / BSP
 .metals/
 .bloop/
-
-# BSP
 .bsp/
+# Secrets et système
+.env
+.DS_Store
