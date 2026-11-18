@@ -1,15 +1,17 @@
 # EJR-ManageKitchen — Plateforme SaaS de Restauration Connectée
 
-![Version](https://img.shields.io/badge/version-0.1.0-blue)
-![Licence](https://img.shields.io/badge/licence-MIT-green)
-![Couverture](https://img.shields.io/badge/couverture-à_mesurer-lightgrey)
-![Qualité](https://img.shields.io/badge/SonarQube-à_configurer-lightgrey)
+[![CI](https://github.com/ErickJanaPro/EJR-ManageKitchen/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/ErickJanaPro/EJR-ManageKitchen/actions/workflows/ci.yml)
+[![Version](https://img.shields.io/github/v/tag/ErickJanaPro/EJR-ManageKitchen?label=version&sort=semver)](https://github.com/ErickJanaPro/EJR-ManageKitchen/tags)
+[![Licence](https://img.shields.io/github/license/ErickJanaPro/EJR-ManageKitchen?label=licence)](LICENSE)
+[![Couverture](https://raw.githubusercontent.com/ErickJanaPro/EJR-ManageKitchen/badges/jacoco.svg)](https://github.com/ErickJanaPro/EJR-ManageKitchen/actions/workflows/ci.yml)
+[![Branches](https://raw.githubusercontent.com/ErickJanaPro/EJR-ManageKitchen/badges/branches.svg)](https://github.com/ErickJanaPro/EJR-ManageKitchen/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/ErickJanaPro/EJR-ManageKitchen/actions/workflows/codeql.yml/badge.svg?branch=develop)](https://github.com/ErickJanaPro/EJR-ManageKitchen/actions/workflows/codeql.yml)
 ![Java](https://img.shields.io/badge/Java-17%2B-orange)
 ![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.5-6DB33F)
 
 Projet de Master 1 MIAGE. Une plateforme qui relie l'**Espace Client (B2C)**, c'est-à-dire le menu, la commande, l'assistant IA et le suivi de livraison, à l'**Espace Entreprise (B2B)** : fournisseurs, stock, recettes, finances et écran de cuisine (KDS).
 
-> Les badges « couverture » et « SonarQube » sont provisoires. Il faudra les remplacer par les badges dynamiques une fois l'intégration continue en place.
+> Badges : **CI** = compilation + tests à chaque push et pull request ; **Version** = dernier tag Git ; **Couverture / Branches** = mesurées par JaCoCo dans la CI (publiées sur la branche `badges`) ; **CodeQL** = analyse statique de qualité et de sécurité du code.
 
 ---
 
@@ -23,7 +25,7 @@ Projet de Master 1 MIAGE. Une plateforme qui relie l'**Espace Client (B2C)**, c'
 
 ## Stack
 
-Java 17+ · Spring Boot 3.5 · Spring Security + JWT · Spring Data JPA · PostgreSQL · Flyway · WebSocket (STOMP) · OpenAPI/Swagger · JaCoCo · Gradle (Kotlin DSL)
+Java 17+ · Spring Boot 3.5 · Spring Security + JWT · Spring Data JPA · PostgreSQL · Flyway · WebSocket (STOMP) · OpenAPI/Swagger · JaCoCo · Gradle (Kotlin DSL) · GitHub Actions · CodeQL
 
 ---
 
@@ -72,11 +74,28 @@ Les tables sont créées automatiquement au démarrage par **Flyway** (`app/src/
 | Cuisinier | `cuisinier@ejr.local` | `password123` |
 | Client | `client@ejr.local` | `password123` |
 
-### 4. Tests et couverture
+### 4. Tests et couverture (en local)
 ```bash
 ./gradlew test
 ```
 Les tests tournent sur une base H2 en mémoire, Docker n'est pas nécessaire. Le rapport de couverture JaCoCo se trouve dans `app/build/reports/jacoco/test/html/index.html`.
+
+### 5. Intégration continue
+
+À chaque push sur `main` / `develop` et à chaque pull request, GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) :
+1. compile le projet et lance tous les tests (`./gradlew build`) ;
+2. mesure la couverture avec JaCoCo et publie les rapports dans l'onglet **Actions** ;
+3. compile le dossier du projet (`doc/DOSSIER.md` → PDF).
+
+[`codeql.yml`](.github/workflows/codeql.yml) analyse la qualité et la sécurité du code (Java et JavaScript).
+
+## Versions
+
+| Version | Contenu |
+|---|---|
+| **v0.1.0** | Socle commun (Gradle, sécurité JWT, CI) · F5 utilisateurs & rôles · F6 commandes + écran cuisine temps réel · F7 notifications · F1 fournisseurs · menu client |
+
+Détail et évolutions : [`doc/DOSSIER.md`](doc/DOSSIER.md).
 
 ---
 

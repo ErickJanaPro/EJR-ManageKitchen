@@ -1,0 +1,106 @@
+# Intégration continue : compile, lance les tests, mesure la couverture et compile le dossier en PDF.
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+    tags: ["v*"]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build & tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Gradle (wrapper + cache)
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Compilation, tests et rapport de couverture
+        run: |
+          chmod +x gradlew
+          ./gradlew build --no-configuration-cache
+
+      - name: Couverture JaCoCo
+        id: jacoco
+        uses: cicirello/jacoco-badge-generator@v2
+        with:
+          jacoco-csv-file: app/build/reports/jacoco/test/jacocoTestReport.csv
+          badges-directory: badges
+          generate-branches-badge: true
+          generate-summary: true
+
+      - name: Résumé dans l'onglet Actions
+        if: always()
+        run: |
+          echo "### Résultat" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Couverture des instructions : ${{ steps.jacoco.outputs.coverage }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Couverture des branches : ${{ steps.jacoco.outputs.branches }}" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Rapports de tests et de couverture
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rapports-tests-couverture
+          path: |
+            app/build/reports/tests/test
+            app/build/reports/jacoco/test/html
+
+      - name: Badges (pour l'étape de publication)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+        uses: actions/upload-artifact@v4
+        with:
+          name: badges
+          path: badges
+
+  # Publie les badges de couverture sur la branche « badges » (non protégée) : le README les affiche.
+  publish-badges:
+    name: Publication des badges
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: badges
+          path: badges
+      - uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: badges
+          publish_dir: ./badges
+          commit_message: "chore: mise à jour des badges de couverture"
+
+  # Compile le dossier du projet (Markdown -> PDF) et le met à disposition dans l'onglet Actions.
+  dossier:
+    name: Dossier PDF
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pandoc + LaTeX
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq pandoc texlive-xetex texlive-lang-french texlive-fonts-recommended lmodern > /dev/null
+      - name: Compilation
+        run: |
+          cd doc
+          pandoc DOSSIER.md -o DOSSIER.pdf --pdf-engine=xelatex --toc --number-sections \
+            -V lang=fr -V geometry:margin=2.2cm -V colorlinks=true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dossier-pdf
+          path: doc/DOSSIER.pdf
