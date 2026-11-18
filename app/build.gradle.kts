@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "com.ejr.managekitchen"
-version = "0.1.0-SNAPSHOT"
+version = "0.1.0"
 
 repositories {
     mavenCentral()
@@ -48,7 +48,8 @@ tasks.test {
 tasks.jacocoTestReport {
     dependsOn(tasks.test)
     reports {
-        xml.required.set(true)   // pour SonarQube / badge de couverture
+        xml.required.set(true)   // analyse externe éventuelle
+        csv.required.set(true)   // badge de couverture (CI)
         html.required.set(true)  // app/build/reports/jacoco/test/html/index.html
     }
 }
