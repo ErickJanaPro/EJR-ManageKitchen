@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EJR - Restauration Connectée</title>
+    <!-- Préparation Leaflet (Carte géolocalisation) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="logo">EJR Kitchen</div>
+        <ul class="nav-links">
+            <li><a href="#">Accueil</a></li>
+            <li><a href="#menu">Notre Menu</a></li>
+            <li><a href="#">Mon Panier (0)</a></li>
+            <li><a href="#">Assistant IA 🤖</a></li>
+        </ul>
+    </nav>
+
+    <main>
+        <section id="menu">
+            <h2>À la carte aujourd'hui</h2>
+            <!-- Les plats seront injectés ici par JavaScript -->
+            <div id="menu-container" class="menu-grid">
+                <p>Chargement du menu en cours...</p>
+            </div>
+        </section>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>
