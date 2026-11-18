@@ -17,8 +17,6 @@ Ce dossier est versionné dans le dépôt principal (`doc/DOSSIER.md`) et compil
 |---|---|---|
 | Rendu 1 | Dossier de lancement | Équipe, projet, scénarios, architecture envisagée, protocole IA, dépôt |
 | **v0.1.0** | Rendu 2 | Structure du code unifiée, workflow Git, intégration continue, badges, journal des fonctionnalités livrées (section 8) |
-| v0.2.0 | Rendu 3 | *À venir : conteneurisation* |
-| v1.0.0 | Rendu final | *À venir* |
 
 # Présentation du projet et caractère innovant
 
@@ -125,7 +123,7 @@ L'équipe s'est aidée d'un assistant IA conversationnel pour rédiger le plan d
 
 ## Workflow Git
 
-- `main` reçoit uniquement les versions rendues, chacune figée par un tag (`v0.1.0`, `v0.2.0`, `v1.0.0`).
+- `main` reçoit uniquement les versions rendues, chacune figée par un tag (`v0.1.0` pour ce rendu).
 - `develop` est la branche d'intégration et la branche par défaut du dépôt.
 - Une branche par fonctionnalité, `feature/F<n>-<sujet>`, fusionnée dans `develop` par pull request.
 - `main` et `develop` sont **protégées** : pas de push direct, et chaque pull request doit être approuvée par un autre membre.
@@ -184,8 +182,7 @@ Le `README.md` affiche les badges de **build (CI)**, de **version** (dernier tag
 
 ## Prochaines versions
 
-- **v0.2.0 (Rendu 3)** : conteneurisation de l'application (Dockerfile et Docker Compose complet : application + base), nouvelle feature majeure par membre, branchement réel du stock sur les commandes.
-- **v1.0.0 (Rendu final)** : intégration complète des dix fonctionnalités et soutenance.
+- **v0.2.0 (Rendu 3 à suivre)**
 
 # Points ouverts
 
