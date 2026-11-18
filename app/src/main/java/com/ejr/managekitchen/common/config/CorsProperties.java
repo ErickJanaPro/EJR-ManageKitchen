@@ -1,0 +1,14 @@
+package com.ejr.managekitchen.common.config;
+
+import org.springframework.boot.context.properties.ConfigurationProperties;
+
+import java.util.List;
+
+/** Origines autorisées à appeler l'API et le WebSocket (propriété app.cors.allowed-origins). */
+@ConfigurationProperties(prefix = "app.cors")
+public record CorsProperties(List<String> allowedOrigins) {
+
+    public CorsProperties {
+        allowedOrigins = allowedOrigins == null ? List.of() : List.copyOf(allowedOrigins);
+    }
+}
