@@ -87,7 +87,8 @@ Les tests suivent la même arborescence dans `app/src/test/java/`. Ils utilisent
 
 ## 6. Tests et Qualité
 
-* Le code doit compiler sans erreur avant toute PR.
+* Le code doit compiler sans erreur avant toute PR : la **CI GitHub Actions** (`.github/workflows/ci.yml`) le vérifie automatiquement et doit être verte pour fusionner.
+* Chaque PR doit être approuvée par **un autre membre** (règle de protection de `main` et `develop`).
 * **Couverture :** Chaque nouvelle feature doit inclure ses tests (Unitaires ou MockMvc pour l'intégration).
 * **JaCoCo :** L'objectif de couverture est d'environ 80%.
 
@@ -98,3 +99,9 @@ Les tests suivent la même arborescence dans `app/src/test/java/`. Ils utilisent
 # Rapport de couverture : app/build/reports/jacoco/test/html/index.html
 .\gradlew.bat clean       # Nettoyer les caches (si problème de compilation)
 ```
+
+## 7. Versions
+
+* Chaque rendu correspond à une version figée par un **tag** sur `main` : `v0.1.0`, `v0.2.0`, `v1.0.0`.
+* Procédure : PR `develop` → `main`, puis `git tag -a vX.Y.Z -m "..."` et `git push origin vX.Y.Z`.
+* Le dossier `doc/DOSSIER.md` est mis à jour dans la même version (section « Journal des versions »).
