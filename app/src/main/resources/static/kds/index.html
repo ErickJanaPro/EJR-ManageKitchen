@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Écran de cuisine — KDS</title>
+  <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7.0.0/bundles/stomp.umd.min.js"></script>
+  <style>
+    :root { --bg:#f4f6f8; --card:#fff; --ink:#1f2937; --muted:#6b7280; --line:#e5e7eb;
+            --new:#c62828; --prep:#e65100; --ready:#2e7d32; --brand:#1f3a5f; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, sans-serif; background: var(--bg); color: var(--ink); }
+    header { display: flex; align-items: center; gap: 1rem; padding: .8rem 1.2rem; background: var(--brand); color: #fff; }
+    header h1 { font-size: 1.1rem; margin: 0; flex: 1; }
+    .status { font-size: .85rem; padding: .2rem .6rem; border-radius: 99px; background: rgba(255,255,255,.15); }
+    .status.on::before { content: "● "; color: #66bb6a; }
+    .status.off::before { content: "● "; color: #ef5350; }
+    button { font: inherit; cursor: pointer; border: 0; border-radius: 6px; padding: .5rem .9rem; }
+    #login { max-width: 360px; margin: 4rem auto; background: var(--card); padding: 1.5rem; border-radius: 10px;
+             box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+    #login input { width: 100%; padding: .6rem; margin: .3rem 0 .8rem; border: 1px solid var(--line); border-radius: 6px; font: inherit; }
+    #login button { width: 100%; background: var(--brand); color: #fff; }
+    .error { color: var(--new); min-height: 1.2em; font-size: .9rem; }
+    #board { display: none; grid-template-columns: repeat(3, 1fr); gap: 1rem; padding: 1rem; }
+    .col h2 { font-size: .95rem; text-transform: uppercase; letter-spacing: .04em; margin: 0 0 .6rem;
+              display: flex; justify-content: space-between; }
+    .col[data-status="NOUVELLE"] h2 { color: var(--new); }
+    .col[data-status="EN_PREPARATION"] h2 { color: var(--prep); }
+    .col[data-status="PRETE"] h2 { color: var(--ready); }
+    .card { background: var(--card); border-radius: 8px; padding: .8rem; margin-bottom: .7rem;
+            box-shadow: 0 1px 2px rgba(0,0,0,.08); border-left: 4px solid var(--line); }
+    .col[data-status="NOUVELLE"] .card { border-left-color: var(--new); }
+    .col[data-status="EN_PREPARATION"] .card { border-left-color: var(--prep); }
+    .col[data-status="PRETE"] .card { border-left-color: var(--ready); }
+    .card.flash { animation: flash 1.2s ease-out; }
+    @keyframes flash { from { background: #fff8e1; } to { background: var(--card); } }
+    .card .head { display: flex; justify-content: space-between; font-weight: 600; }
+    .card .meta { color: var(--muted); font-size: .8rem; margin: .2rem 0 .5rem; }
+    .card ul { margin: 0 0 .6rem; padding-left: 1.1rem; }
+    .card button { width: 100%; color: #fff; }
+    .btn-prep { background: var(--prep); } .btn-ready { background: var(--ready); } .btn-done { background: var(--brand); }
+    @media (max-width: 800px) { #board { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<header>
+  <h1>EJR-ManageKitchen — Écran de cuisine</h1>
+  <span id="ws-status" class="status off">Déconnecté</span>
+  <button id="logout" style="display:none">Déconnexion</button>
+</header>
+
+<form id="login">
+  <h2 style="margin-top:0">Connexion cuisine</h2>
+  <label>E-mail <input id="email" type="email" value="cuisinier@ejr.local" required></label>
+  <label>Mot de passe <input id="password" type="password" value="password123" required></label>
+  <button type="submit">Se connecter</button>
+  <p class="error" id="login-error"></p>
+</form>
+
+<main id="board">
+  <section class="col" data-status="NOUVELLE"><h2>Nouvelles <span></span></h2><div></div></section>
+  <section class="col" data-status="EN_PREPARATION"><h2>En préparation <span></span></h2><div></div></section>
+  <section class="col" data-status="PRETE"><h2>Prêtes <span></span></h2><div></div></section>
+</main>
+
+<script>
+  const ACTIONS = {
+    NOUVELLE: { label: "Prendre en charge", next: () => "EN_PREPARATION", css: "btn-prep" },
+    EN_PREPARATION: { label: "Commande prête", next: () => "PRETE", css: "btn-ready" },
+    PRETE: { label: null, next: o => o.fulfillmentType === "RETRAIT" ? "RECUPEREE" : "LIVREE", css: "btn-done" }
+  };
+  const KITCHEN_STATUSES = Object.keys(ACTIONS);
+  const orders = new Map();
+  let token = null;
+  let stomp = null;
+
+  const $ = sel => document.querySelector(sel);
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  async function api(path, options = {}) {
+    const res = await fetch(path, {
+      ...options,
+      headers: { "Content-Type": "application/json", ...(token ? { Authorization: "Bearer " + token } : {}), ...options.headers }
+    });
+    const body = res.status === 204 ? null : await res.json().catch(() => null);
+    if (!res.ok) throw new Error(body?.message || ("Erreur " + res.status));
+    return body;
+  }
+
+  $("#login").addEventListener("submit", async e => {
+    e.preventDefault();
+    $("#login-error").textContent = "";
+    try {
+      const auth = await api("/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ email: $("#email").value, password: $("#password").value })
+      });
+      if (!["CUISINIER", "ADMIN"].includes(auth.user.role)) throw new Error("Compte cuisinier ou admin requis");
+      token = auth.accessToken;
+      await start();
+    } catch (err) {
+      $("#login-error").textContent = err.message;
+    }
+  });
+
+  $("#logout").addEventListener("click", () => location.reload());
+
+  async function start() {
+    $("#login").style.display = "none";
+    $("#board").style.display = "grid";
+    $("#logout").style.display = "inline-block";
+    (await api("/api/kitchen/orders")).forEach(o => orders.set(o.id, o));
+    render();
+    connect();
+  }
+
+  function connect() {
+    const scheme = location.protocol === "https:" ? "wss" : "ws";
+    stomp = new StompJs.Client({
+      brokerURL: `${scheme}://${location.host}/ws`,
+      connectHeaders: { Authorization: "Bearer " + token },
+      reconnectDelay: 3000,
+      onConnect: () => {
+        setStatus(true);
+        stomp.subscribe("/topic/kitchen/orders", frame => {
+          const msg = JSON.parse(frame.body);
+          if (KITCHEN_STATUSES.includes(msg.order.status)) orders.set(msg.order.id, msg.order);
+          else orders.delete(msg.order.id);
+          render(msg.type === "ORDER_CREATED" ? msg.order.id : null);
+        });
+      },
+      onWebSocketClose: () => setStatus(false),
+      onStompError: frame => { setStatus(false); console.error(frame.headers.message); }
+    });
+    stomp.activate();
+  }
+
+  function setStatus(on) {
+    const el = $("#ws-status");
+    el.className = "status " + (on ? "on" : "off");
+    el.textContent = on ? "Temps réel actif" : "Déconnecté";
+  }
+
+  async function advance(id) {
+    const order = orders.get(id);
+    try {
+      await api(`/api/orders/${id}/status`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: ACTIONS[order.status].next(order) })
+      });
+      // L'affichage se met à jour via le WebSocket (même message que les autres écrans).
+    } catch (err) {
+      alert(err.message);
+    }
+  }
+
+  function render(flashId) {
+    for (const status of KITCHEN_STATUSES) {
+      const col = document.querySelector(`.col[data-status="${status}"]`);
+      const list = [...orders.values()].filter(o => o.status === status)
+        .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+      col.querySelector("h2 span").textContent = list.length;
+      col.querySelector("div").innerHTML = list.map(o => {
+        const action = ACTIONS[status];
+        const label = action.label || (o.fulfillmentType === "RETRAIT" ? "Récupérée par le client" : "Remise au livreur");
+        return `<article class="card ${o.id === flashId ? "flash" : ""}">
+          <div class="head"><span>#${o.id}</span><span>${o.fulfillmentType === "RETRAIT" ? "À emporter" : "Livraison"}</span></div>
+          <div class="meta">${new Date(o.createdAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</div>
+          <ul>${o.items.map(i => `<li>${i.quantity} × ${esc(i.dishName)}</li>`).join("")}</ul>
+          <button class="${action.css}" onclick="advance(${o.id})">${label}</button>
+        </article>`;
+      }).join("");
+    }
+  }
+</script>
+</body>
+</html>

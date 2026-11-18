@@ -1,0 +1,12 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:managekitchen;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: none   # schéma créé par Flyway ; la validation Hibernate se fait au démarrage réel sur PostgreSQL
+app:
+  jwt:
+    secret: test-secret-ejr-managekitchen-0123456789-abcdefghij

@@ -1,0 +1,7 @@
+package com.ejr.managekitchen.supplychain.shared;
+
+public class ResourceNotFoundException extends RuntimeException {
+    public ResourceNotFoundException(String message) {
+        super(message);
+    }
+}
