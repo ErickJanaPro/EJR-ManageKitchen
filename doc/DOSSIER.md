@@ -17,6 +17,7 @@ Ce dossier est versionné dans le dépôt principal (`doc/DOSSIER.md`) et compil
 |---|---|---|
 | Rendu 1 | Dossier de lancement | Équipe, projet, scénarios, architecture envisagée, protocole IA, dépôt |
 | **v0.1.0** | Rendu 2 | Structure du code unifiée, workflow Git, intégration continue, badges, journal des fonctionnalités livrées (section 8) |
+| **v0.2.0** | Rendu 3 | E-mails réels (F7), stock (F2), parcours client (B2C), mise à jour de la CI, conteneurisation, méthode de travail en équipe |
 
 # Présentation du projet et caractère innovant
 
@@ -143,6 +144,47 @@ Le `README.md` affiche les badges de **build (CI)**, de **version** (dernier tag
 
 # Journal des versions
 
+## v0.2.0 (Rendu 3)
+
+### Socle commun et intégration continue
+
+- Actions GitHub mises à jour pour Node.js 24 (CodeQL v4, checkout v5…), et correction de l'envoi des résultats CodeQL (permission `actions: read` manquante), qui échouait sur toutes les pull requests.
+- Suppression automatique des branches après leur fusion.
+- Conteneurisation : *à compléter par Erick après la fusion de la branche dédiée.*
+
+### Fonctionnalités livrées par membre
+
+**Erick — F7 : envoi réel des e-mails de notification (issue #13)**
+
+- Quand une commande passe à « Prête », le client reçoit un e-mail (SMTP avec `spring-boot-starter-mail`) en plus de la notification WebSocket, avec un texte adapté au retrait ou à la livraison.
+- Envoi en arrière-plan (`@Async`) : le cuisinier n'attend pas ; un échec d'envoi est journalisé et ne bloque jamais la commande.
+- Adresses e-mail masquées dans les journaux (donnée personnelle).
+- Deux modes : `log` par défaut (tests, postes sans configuration) et `smtp` ; Mailpit dans Docker Compose pour lire les e-mails en développement (`http://localhost:8025`).
+- Tests : construction du message, échec d'envoi, masquage des adresses, et scénario complet (e-mail envoyé au bon client au passage à « Prête »).
+
+**Rayane — F2 : gestion du stock**
+
+- Stock par ingrédient avec seuil d'alerte, et historique de chaque mouvement (entrée, ajustement, sortie) ; nouvelles tables créées par une migration Flyway datée.
+- API `/api/stock` : consultation du stock, des ingrédients sous le seuil (`/low`) et de l'historique des mouvements ; réception de marchandise (`/receive`), ajustement après inventaire (`/adjust`) et réglage du seuil (`/threshold`).
+- Droits : l'administrateur gère le stock, le cuisinier peut le consulter, le client n'y a pas accès.
+- Consommation d'ingrédients qui refuse un stock insuffisant (erreur 409), première brique de la décrémentation automatique au moment des commandes.
+- Tests : stock initial à zéro, réception et traçabilité, quantités invalides, ajustement, liste des stocks bas, ingrédient inconnu (404), consommation avec stock insuffisant, et contrôle des droits par rôle.
+
+**Joël — Parcours client B2C**
+
+- Connexion et inscription du client depuis l'Espace Client, avec le jeton JWT du socle commun.
+- Menu dynamique aligné sur le catalogue de plats (prix, description, disponibilité), et panier avec choix entre retrait et livraison ; validation de la commande via l'API Commandes.
+- Suivi en direct : statut des commandes et notifications reçus en temps réel par WebSocket, historique des commandes et des notifications, notifications marquées comme lues.
+- Refonte de l'interface (navigation, panier, section de suivi).
+- Tests : menu accessible sans connexion et cohérent avec le catalogue, page d'accueil publique.
+
+### Méthode de travail en équipe
+
+- Une issue GitHub par fonctionnalité, une branche par issue (`feature/F<n>-…`), une pull request vers `develop` relue et approuvée par un autre membre ; l'issue se ferme automatiquement à la fusion (`Closes #n`).
+- Commits courts et thématiques (`build`, `feat`, `test`, `docs`, `ci`).
+- Avant d'ouvrir une pull request, chaque branche est remise sur le dernier `develop` (`git fetch` puis `git rebase`), pour intégrer le travail des autres sans commit de fusion inutile.
+- Un correctif qui concerne toute l'équipe (par exemple la CI) passe par sa propre branche et sa propre pull request, puis il est intégré dans les branches en cours.
+
 ## v0.1.0 (Rendu 2)
 
 ### Socle commun
@@ -180,15 +222,11 @@ Le `README.md` affiche les badges de **build (CI)**, de **version** (dernier tag
 - Ajout du statut `RECUPEREE` pour le retrait sur place, à côté de `LIVREE`.
 - La décrémentation du stock a lieu dès la validation de la commande, dans la même transaction.
 
-## Prochaines versions
-
-- **v0.2.0 (Rendu 3 à suivre)**
 
 # Points ouverts
 
 | Sujet | Décision à prendre |
 |---|---|
-| Service d'e-mail | Choisir un service d'envoi réel pour les notifications (aujourd'hui simulé) |
 | Fournisseur d'IA | Choisir entre OpenAI et Gemini (coût, quotas, clé d'API) |
 | Livraison | Aucun rôle de livreur n'est défini : le cuisinier ou l'administrateur clôture la commande |
 | Accès au back-office | Restreindre la gestion des fournisseurs au rôle ADMIN quand l'interface d'administration sera prête |
