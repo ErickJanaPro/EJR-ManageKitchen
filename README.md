@@ -104,6 +104,7 @@ Les tests tournent sur une base H2 en mémoire, Docker n'est pas nécessaire. Le
 
 | Version | Contenu |
 |---|---|
+| **v0.2.0** | F7 e-mails réels (Erick) · F2 stock (Rayane) · parcours client B2C (Joël) · CI mise à jour (Node.js 24, CodeQL v4) |
 | **v0.1.0** | Socle commun (Gradle, sécurité JWT, CI) · F5 utilisateurs & rôles · F6 commandes + écran cuisine temps réel · F7 notifications · F1 fournisseurs · menu client |
 
 Détail et évolutions : [`doc/DOSSIER.md`](doc/DOSSIER.md).
