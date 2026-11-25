@@ -1,57 +1,238 @@
+* {
+    box-sizing: border-box;
+}
+
 body {
-    font-family: Arial, sans-serif;
+    font-family: system-ui, Arial, sans-serif;
     margin: 0;
-    padding: 0;
-    background-color: #f9f9f9;
+    background: #f4f6f8;
+    color: #1f2937;
 }
 
 .navbar {
     display: flex;
     justify-content: space-between;
-    padding: 1rem 2rem;
-    background: #2c3e50;
+    align-items: center;
+    padding: 0.9rem 2rem;
+    background: #1f3a5f;
     color: white;
+}
+
+.logo {
+    font-size: 1.2rem;
+    font-weight: bold;
 }
 
 .nav-links {
     list-style: none;
     display: flex;
-    gap: 1rem;
+    align-items: center;
+    gap: 1.2rem;
     margin: 0;
+    padding: 0;
 }
 
 .nav-links a {
     color: white;
     text-decoration: none;
-    font-weight: bold;
+    font-weight: 600;
 }
 
-main {
-    padding: 2rem;
+.nav-btn {
+    background: #e67e22;
+    color: white;
+    border: 0;
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.badge {
+    font-size: 0.8rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 99px;
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.badge.on::before {
+    content: "● ";
+    color: #66bb6a;
+}
+
+.badge.off::before {
+    content: "● ";
+    color: #ef5350;
+}
+
+.layout {
+    max-width: 1100px;
+    margin: 1.5rem auto;
+    padding: 0 1.2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.card {
+    background: white;
+    padding: 1.4rem;
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.hidden {
+    display: none !important;
 }
 
 .menu-grid {
-    display: flex;
-    gap: 1.5rem;
-    flex-wrap: wrap;
-    margin-top: 1rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 1.2rem;
 }
 
 .menu-card {
     background: white;
-    padding: 1.5rem;
-    border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    width: 250px;
+    padding: 1.2rem;
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
     text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
 }
 
-.menu-card h3 {
-    margin-top: 0;
+.menu-card.unavailable {
+    opacity: 0.55;
 }
 
 .price {
     font-weight: bold;
     color: #e67e22;
-    font-size: 1.2rem;
+    font-size: 1.15rem;
+    margin: 0.6rem 0;
+}
+
+button {
+    font: inherit;
+    background: #1f3a5f;
+    color: white;
+    border: 0;
+    padding: 0.55rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+button:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
+}
+
+button.secondary {
+    background: #e5e7eb;
+    color: #1f2937;
+}
+
+button.small {
+    padding: 0.2rem 0.55rem;
+    font-size: 0.85rem;
+}
+
+input,
+select {
+    padding: 0.55rem;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font: inherit;
+}
+
+#auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+    max-width: 360px;
+}
+
+.row {
+    display: flex;
+    gap: 0.6rem;
+    align-items: center;
+}
+
+.cart-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.cart-footer {
+    margin-top: 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.total {
+    font-size: 1.1rem;
+    margin: 0;
+}
+
+.order-card {
+    border: 1px solid #e5e7eb;
+    border-left: 4px solid #1f3a5f;
+    border-radius: 8px;
+    padding: 0.9rem;
+    margin-top: 0.8rem;
+}
+
+.status-pill {
+    display: inline-block;
+    padding: 0.15rem 0.6rem;
+    border-radius: 99px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    background: #e0e7ff;
+    color: #1e3a8a;
+}
+
+.status-pill.PRETE {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.status-pill.EN_PREPARATION {
+    background: #ffedd5;
+    color: #9a3412;
+}
+
+.notif {
+    background: #ecfdf5;
+    border: 1px solid #10b981;
+    padding: 0.7rem 1rem;
+    border-radius: 8px;
+    margin-bottom: 0.6rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.muted {
+    color: #6b7280;
+}
+
+.error {
+    color: #c62828;
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+.feedback {
+    color: #2e7d32;
+    font-size: 0.9rem;
+    margin: 0;
+    width: 100%;
 }
