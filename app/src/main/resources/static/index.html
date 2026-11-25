@@ -45,10 +45,30 @@
             </div>
         </section>
 
-        <!-- Panier -->
+
+        <!-- Suivi commandes & notifications temps réel -->
+        <section id="suivi" class="card">
+            <h2>Suivi en direct & Notifications</h2>
+            <div id="notifications-box"></div>
+            <div id="orders-list"><p class="muted">Connectez-vous pour voir et suivre vos commandes.</p></div>
+        </section>
+    </main>
+
+    <!-- Panier -->
         <section id="panier" class="card">
             <h2>Mon Panier</h2>
             <div id="cart-items"><p class="muted">Votre panier est vide.</p></div>
+            <div id="delivery-address-box" class="delivery-box hidden">
+                <label for="delivery-address">
+                    <strong>Adresse de livraison</strong> — saisissez une adresse puis cliquez sur <em>Localiser</em>,
+                    <strong>ou cliquez directement sur la carte</strong> (le point est enregistré automatiquement, sans cliquer sur <em>Localiser</em>) :
+                </label>
+                <div class="row" style="margin-top:0.4rem;">
+                    <input id="delivery-address" type="text" placeholder="Ex. 15 Rue de Rivoli, Paris" style="flex:1;">
+                    <button type="button" id="geocode-btn" class="secondary">Localiser</button>
+                </div>
+                <p id="delivery-zone-info" class="muted" style="margin:0.4rem 0 0;"></p>
+            </div>
             <div class="cart-footer">
                 <label>
                     Mode de remise :
@@ -63,14 +83,15 @@
             </div>
         </section>
 
-        <!-- Suivi commandes & notifications temps réel -->
-        <section id="suivi" class="card">
-            <h2>Suivi en direct & Notifications</h2>
-            <div id="notifications-box"></div>
-            <div id="orders-list"><p class="muted">Connectez-vous pour voir et suivre vos commandes.</p></div>
+        <!-- Carte & Suivi de livraison (F8) -->
+        <section id="carte" class="card">
+            <h2>Carte & Suivi de livraison</h2>
+            <p class="muted" id="map-status-text">Zone de livraison : 15 km autour d'EJR Kitchen (Paris Centre).</p>
+            <div id="delivery-map"></div>
         </section>
-    </main>
 
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
