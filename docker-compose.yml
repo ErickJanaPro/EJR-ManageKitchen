@@ -12,5 +12,14 @@ services:
     volumes:
       - ejr-pgdata:/var/lib/postgresql/data
 
+  # Serveur d'e-mails de développement : reçoit les e-mails envoyés en mode smtp
+  # Interface web : http://localhost:8025
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: ejr-mailpit
+    ports:
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # interface web
+
 volumes:
   ejr-pgdata:
