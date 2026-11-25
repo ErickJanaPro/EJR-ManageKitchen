@@ -104,11 +104,11 @@ NOUVELLE ──► EN_PREPARATION ──► PRETE ──► LIVREE     (fulfillm
 ```
 - Seuls CUISINIER et ADMIN changent les statuts (`PATCH /api/orders/{id}/status` avec `{ "status": "PRETE" }`).
 - Une transition interdite renvoie **409**, tout comme deux modifications simultanées de la même commande.
-- Le passage à `PRETE` notifie le client par WebSocket et par e-mail. Pour l'instant, l'e-mail est simulé dans les logs.
+- Le passage à `PRETE` notifie le client par WebSocket et par e-mail (envoi réel par SMTP avec `EMAIL_MODE=smtp`, simulé dans les logs par défaut).
 
 ## 5. Hypothèses à valider en équipe
 
 1. Le statut `RECUPEREE` a été ajouté pour le retrait sur place, que le scénario du dossier de lancement mentionne.
 2. Faute de rôle livreur, c'est le cuisinier (ou l'admin) qui passe une commande en `LIVREE` ou `RECUPEREE`.
 3. Le chiffre d'affaires ne compte que les commandes remises au client (`LIVREE` ou `RECUPEREE`).
-4. Le service d'e-mail réel reste à choisir : il faudra remplacer `LoggingEmailSender`.
+4. E-mails : SMTP via `spring-boot-starter-mail` ; Mailpit en développement, serveur SMTP réel à configurer par variables d'environnement en production.

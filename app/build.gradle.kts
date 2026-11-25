@@ -24,6 +24,7 @@ dependencies {
     implementation(libs.spring.boot.starter.security)
     implementation(libs.spring.boot.starter.validation)
     implementation(libs.spring.boot.starter.websocket)
+    implementation(libs.spring.boot.starter.mail)
     implementation(libs.springdoc.openapi)
 
     implementation(libs.jjwt.api)
