@@ -74,6 +74,17 @@ Les tables sont créées automatiquement au démarrage par **Flyway** (`app/src/
 | Cuisinier | `cuisinier@ejr.local` | `password123` |
 | Client | `client@ejr.local` | `password123` |
 
+### E-mails de notification (Mailpit)
+
+Par défaut (`EMAIL_MODE=log`), les e-mails sont seulement écrits dans les logs. Pour un envoi réel en local :
+
+```bash
+docker compose up -d                       # démarre aussi Mailpit
+EMAIL_MODE=smtp ./gradlew :app:bootRun
+```
+
+Les e-mails envoyés (par exemple « Votre commande est prête ») s'affichent sur http://localhost:8025. Rien ne part réellement sur Internet.
+
 ### 4. Tests et couverture (en local)
 ```bash
 ./gradlew test
@@ -93,6 +104,7 @@ Les tests tournent sur une base H2 en mémoire, Docker n'est pas nécessaire. Le
 
 | Version | Contenu |
 |---|---|
+| **v0.2.0** | F7 e-mails réels (Erick) · F2 stock (Rayane) · parcours client B2C (Joël) · CI mise à jour (Node.js 24, CodeQL v4) |
 | **v0.1.0** | Socle commun (Gradle, sécurité JWT, CI) · F5 utilisateurs & rôles · F6 commandes + écran cuisine temps réel · F7 notifications · F1 fournisseurs · menu client |
 
 Détail et évolutions : [`doc/DOSSIER.md`](doc/DOSSIER.md).

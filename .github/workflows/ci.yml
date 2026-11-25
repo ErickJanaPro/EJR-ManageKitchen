@@ -17,16 +17,16 @@ jobs:
     name: Build & tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
 
       - name: Gradle (wrapper + cache)
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
 
       - name: Compilation, tests et rapport de couverture
         run: |
@@ -51,7 +51,7 @@ jobs:
 
       - name: Rapports de tests et de couverture
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: rapports-tests-couverture
           path: |
@@ -60,7 +60,7 @@ jobs:
 
       - name: Badges (pour l'étape de publication)
         if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: badges
           path: badges
@@ -74,7 +74,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           name: badges
           path: badges
@@ -90,7 +90,7 @@ jobs:
     name: Dossier PDF
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Pandoc + LaTeX
         run: |
           sudo apt-get update -qq
@@ -100,7 +100,7 @@ jobs:
           cd doc
           pandoc DOSSIER.md -o DOSSIER.pdf --pdf-engine=xelatex --toc --number-sections \
             -V lang=fr -V geometry:margin=2.2cm -V colorlinks=true
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: dossier-pdf
           path: doc/DOSSIER.pdf

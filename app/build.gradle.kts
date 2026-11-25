@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "com.ejr.managekitchen"
-version = "0.1.0"
+version = "0.2.0"
 
 repositories {
     mavenCentral()
@@ -24,6 +24,7 @@ dependencies {
     implementation(libs.spring.boot.starter.security)
     implementation(libs.spring.boot.starter.validation)
     implementation(libs.spring.boot.starter.websocket)
+    implementation(libs.spring.boot.starter.mail)
     implementation(libs.springdoc.openapi)
 
     implementation(libs.jjwt.api)

@@ -1,25 +1,282 @@
-document.addEventListener("DOMContentLoaded", () => {
-    fetch('/api/customer/menu')
-        .then(response => response.json())
-        .then(plats => {
-            const container = document.getElementById('menu-container');
-            container.innerHTML = ''; // On vide le texte de chargement
+const state = {
+    menu: [],
+    cart: new Map(),
+    orders: new Map(),
+    notifications: [],
+    token: localStorage.getItem('ejr_token'),
+    user: JSON.parse(localStorage.getItem('ejr_user') || 'null'),
+    registerMode: false,
+    stomp: null
+};
 
-            plats.forEach(plat => {
-                const card = document.createElement('div');
-                card.className = 'menu-card';
-                card.innerHTML = `
-                    <div style="font-size: 3rem;">${plat.imageUrl}</div>
-                    <h3>${plat.nom}</h3>
-                    <p>${plat.description}</p>
-                    <p class="price">${plat.prix.toFixed(2)} €</p>
-                    <button>Ajouter au panier</button>
-                `;
-                container.appendChild(card);
+const $ = sel => document.querySelector(sel);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+async function api(path, options = {}) {
+    const headers = { 'Content-Type': 'application/json', ...options.headers };
+    if (state.token) headers.Authorization = `Bearer ${state.token}`;
+
+    const res = await fetch(path, { ...options, headers });
+    const body = res.status === 204 ? null : await res.json().catch(() => null);
+    if (!res.ok) {
+        const err = new Error(body?.message || `Erreur HTTP ${res.status}`);
+        err.status = res.status;
+        throw err;
+    }
+    return body;
+}
+
+// ---------- Menu ----------
+async function loadMenu() {
+    try {
+        state.menu = await api('/api/customer/menu');
+        renderMenu();
+    } catch (err) {
+        $('#menu-container').innerHTML = `<p class="error">Impossible de charger le menu : ${esc(err.message)}</p>`;
+    }
+}
+
+function renderMenu() {
+    $('#menu-container').innerHTML = state.menu.map(plat => `
+        <article class="menu-card ${plat.disponible ? '' : 'unavailable'}">
+            <div>
+                <div style="font-size: 2.8rem;">${esc(plat.imageUrl)}</div>
+                <h3>${esc(plat.nom)}</h3>
+                <p class="muted">${esc(plat.description)}</p>
+            </div>
+            <div>
+                <p class="price">${Number(plat.prix).toFixed(2)} €</p>
+                <button ${plat.disponible ? '' : 'disabled'} onclick="addToCart(${plat.id})">
+                    ${plat.disponible ? 'Ajouter au panier' : 'Indisponible'}
+                </button>
+            </div>
+        </article>
+    `).join('');
+}
+
+// ---------- Panier ----------
+window.addToCart = function(dishId) {
+    const plat = state.menu.find(p => p.id === dishId);
+    if (!plat || !plat.disponible) return;
+    const entry = state.cart.get(dishId);
+    if (entry) entry.quantity += 1;
+    else state.cart.set(dishId, { plat, quantity: 1 });
+    renderCart();
+};
+
+window.updateQty = function(dishId, delta) {
+    const entry = state.cart.get(dishId);
+    if (!entry) return;
+    entry.quantity += delta;
+    if (entry.quantity <= 0) state.cart.delete(dishId);
+    renderCart();
+};
+
+function renderCart() {
+    const entries = [...state.cart.values()];
+    const count = entries.reduce((s, e) => s + e.quantity, 0);
+    const total = entries.reduce((s, e) => s + Number(e.plat.prix) * e.quantity, 0);
+
+    $('#cart-count').textContent = count;
+    $('#cart-total').textContent = `${total.toFixed(2)} €`;
+    $('#order-btn').disabled = entries.length === 0;
+
+    if (entries.length === 0) {
+        $('#cart-items').innerHTML = '<p class="muted">Votre panier est vide.</p>';
+        return;
+    }
+
+    $('#cart-items').innerHTML = entries.map(({ plat, quantity }) => `
+        <div class="cart-row">
+            <span><strong>${esc(plat.nom)}</strong> (${Number(plat.prix).toFixed(2)} €)</span>
+            <div class="row">
+                <button class="small secondary" onclick="updateQty(${plat.id}, -1)">-</button>
+                <span>${quantity}</span>
+                <button class="small secondary" onclick="updateQty(${plat.id}, 1)">+</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+async function submitOrder() {
+    $('#order-feedback').textContent = '';
+    if (!state.token) {
+        $('#auth-panel').classList.remove('hidden');
+        $('#auth-error').textContent = 'Connectez-vous pour valider votre commande.';
+        return;
+    }
+
+    const payload = {
+        fulfillmentType: $('#fulfillment-type').value,
+        items: [...state.cart.values()].map(({ plat, quantity }) => ({ dishId: plat.id, quantity }))
+    };
+
+    try {
+        const order = await api('/api/orders', { method: 'POST', body: JSON.stringify(payload) });
+        state.cart.clear();
+        state.orders.set(order.id, order);
+        renderCart();
+        renderOrders();
+        $('#order-feedback').textContent = `Commande #${order.id} envoyée en cuisine !`;
+    } catch (err) {
+        $('#order-feedback').textContent = `Erreur : ${err.message}`;
+    }
+}
+
+// ---------- Authentification ----------
+function updateAuthUI() {
+    const btn = $('#auth-toggle-btn');
+    if (state.user && state.token) {
+        btn.textContent = `${state.user.fullName} (Déconnexion)`;
+        $('#auth-panel').classList.add('hidden');
+    } else {
+        btn.textContent = 'Connexion';
+    }
+}
+
+async function handleAuthSubmit(e) {
+    e.preventDefault();
+    $('#auth-error').textContent = '';
+    const endpoint = state.registerMode ? '/api/auth/register' : '/api/auth/login';
+    const body = state.registerMode
+        ? { email: $('#auth-email').value, password: $('#auth-password').value, fullName: $('#auth-fullname').value }
+        : { email: $('#auth-email').value, password: $('#auth-password').value };
+
+    try {
+        const auth = await api(endpoint, { method: 'POST', body: JSON.stringify(body) });
+        state.token = auth.accessToken;
+        state.user = auth.user;
+        localStorage.setItem('ejr_token', state.token);
+        localStorage.setItem('ejr_user', JSON.stringify(state.user));
+        updateAuthUI();
+        await initAuthenticatedSession();
+    } catch (err) {
+        $('#auth-error').textContent = err.message;
+    }
+}
+
+function logout() {
+    if (state.stomp) state.stomp.deactivate();
+    state.token = null;
+    state.user = null;
+    state.orders.clear();
+    state.notifications = [];
+    localStorage.removeItem('ejr_token');
+    localStorage.removeItem('ejr_user');
+    setWsStatus(false);
+    updateAuthUI();
+    renderOrders();
+    renderNotifications();
+}
+
+// ---------- Commandes, Notifications & WebSocket STOMP ----------
+async function initAuthenticatedSession() {
+    if (!state.token) return;
+    try {
+        const [orders, notifs] = await Promise.all([
+            api('/api/orders/me'),
+            api('/api/notifications/me')
+        ]);
+        state.orders = new Map(orders.map(o => [o.id, o]));
+        state.notifications = notifs;
+        renderOrders();
+        renderNotifications();
+        connectWebSocket();
+    } catch (err) {
+        if (err.status === 401) logout();
+    }
+}
+
+function connectWebSocket() {
+    if (state.stomp) state.stomp.deactivate();
+    const scheme = location.protocol === 'https:' ? 'wss' : 'ws';
+    state.stomp = new StompJs.Client({
+        brokerURL: `${scheme}://${location.host}/ws`,
+        connectHeaders: { Authorization: `Bearer ${state.token}` },
+        reconnectDelay: 3000,
+        onConnect: () => {
+            setWsStatus(true);
+            state.stomp.subscribe('/user/queue/orders', frame => {
+                const msg = JSON.parse(frame.body);
+                state.orders.set(msg.order.id, msg.order);
+                renderOrders();
             });
-        })
-        .catch(error => {
-            console.error('Erreur lors du chargement du menu:', error);
-            document.getElementById('menu-container').innerHTML = '<p>Désolé, le menu est indisponible pour le moment.</p>';
-        });
+            state.stomp.subscribe('/user/queue/notifications', frame => {
+                const notif = JSON.parse(frame.body);
+                state.notifications.unshift(notif);
+                renderNotifications();
+            });
+        },
+        onWebSocketClose: () => setWsStatus(false),
+        onStompError: () => setWsStatus(false)
+    });
+    state.stomp.activate();
+}
+
+function setWsStatus(connected) {
+    const badge = $('#ws-badge');
+    badge.className = `badge ${connected ? 'on' : 'off'}`;
+    badge.textContent = connected ? 'Temps réel actif' : 'Hors ligne';
+}
+
+window.markNotifRead = async function(id) {
+    await api(`/api/notifications/${id}/read`, { method: 'PATCH' });
+    state.notifications = state.notifications.map(n => n.id === id ? { ...n, read: true } : n);
+    renderNotifications();
+};
+
+function renderNotifications() {
+    const unread = state.notifications.filter(n => !n.read);
+    $('#notifications-box').innerHTML = unread.map(n => `
+        <div class="notif">
+            <span>🔔 ${esc(n.message)}</span>
+            <button class="small secondary" onclick="markNotifRead(${n.id})">OK</button>
+        </div>
+    `).join('');
+}
+
+function renderOrders() {
+    if (!state.token) {
+        $('#orders-list').innerHTML = '<p class="muted">Connectez-vous pour voir et suivre vos commandes.</p>';
+        return;
+    }
+    const list = [...state.orders.values()].sort((a, b) => b.id - a.id);
+    if (list.length === 0) {
+        $('#orders-list').innerHTML = '<p class="muted">Aucune commande pour le moment.</p>';
+        return;
+    }
+    $('#orders-list').innerHTML = list.map(o => `
+        <article class="order-card">
+            <div class="row" style="justify-content: space-between;">
+                <strong>Commande #${o.id} (${esc(o.fulfillmentType)})</strong>
+                <span class="status-pill ${esc(o.status)}">${esc(o.status)}</span>
+            </div>
+            <ul>${o.items.map(i => `<li>${i.quantity} × ${esc(i.dishName)} — ${Number(i.lineTotal).toFixed(2)} €</li>`).join('')}</ul>
+            <strong>Total : ${Number(o.total).toFixed(2)} €</strong>
+        </article>
+    `).join('');
+}
+
+// ---------- Initialisation ----------
+document.addEventListener('DOMContentLoaded', () => {
+    $('#auth-toggle-btn').addEventListener('click', () => {
+        if (state.token) logout();
+        else $('#auth-panel').classList.toggle('hidden');
+    });
+
+    $('#auth-switch').addEventListener('click', () => {
+        state.registerMode = !state.registerMode;
+        $('#auth-title').textContent = state.registerMode ? 'Inscription client' : 'Connexion client';
+        $('#auth-submit').textContent = state.registerMode ? 'Créer le compte' : 'Se connecter';
+        $('#auth-switch').textContent = state.registerMode ? 'Déjà un compte ?' : 'Créer un compte';
+        $('#auth-fullname').classList.toggle('hidden', !state.registerMode);
+        $('#auth-fullname').required = state.registerMode;
+    });
+
+    $('#auth-form').addEventListener('submit', handleAuthSubmit);
+    $('#order-btn').addEventListener('click', submitOrder);
+
+    updateAuthUI();
+    loadMenu();
+    if (state.token) initAuthenticatedSession();
 });

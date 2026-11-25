@@ -4,29 +4,70 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EJR - Restauration Connectée</title>
-    <!-- Préparation Leaflet (Carte géolocalisation) -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7.0.0/bundles/stomp.umd.min.js"></script>
 </head>
 <body>
 
     <nav class="navbar">
         <div class="logo">EJR Kitchen</div>
         <ul class="nav-links">
-            <li><a href="#">Accueil</a></li>
             <li><a href="#menu">Notre Menu</a></li>
-            <li><a href="#">Mon Panier (0)</a></li>
-            <li><a href="#">Assistant IA 🤖</a></li>
+            <li><a href="#panier">Mon Panier (<span id="cart-count">0</span>)</a></li>
+            <li><a href="#suivi">Mes Commandes</a></li>
+            <li><span id="ws-badge" class="badge off">Hors ligne</span></li>
+            <li><button id="auth-toggle-btn" class="nav-btn">Connexion</button></li>
         </ul>
     </nav>
 
-    <main>
+    <main class="layout">
+        <!-- Bloc Connexion / Inscription -->
+        <section id="auth-panel" class="card hidden">
+            <h2 id="auth-title">Connexion client</h2>
+            <form id="auth-form">
+                <input id="auth-fullname" type="text" placeholder="Nom complet" class="hidden">
+                <input id="auth-email" type="email" placeholder="E-mail" value="client@ejr.local" required>
+                <input id="auth-password" type="password" placeholder="Mot de passe" value="password123" required>
+                <div class="row">
+                    <button type="submit" id="auth-submit">Se connecter</button>
+                    <button type="button" id="auth-switch" class="secondary">Créer un compte</button>
+                </div>
+                <p id="auth-error" class="error"></p>
+            </form>
+        </section>
+
+        <!-- Menu -->
         <section id="menu">
             <h2>À la carte aujourd'hui</h2>
-            <!-- Les plats seront injectés ici par JavaScript -->
             <div id="menu-container" class="menu-grid">
                 <p>Chargement du menu en cours...</p>
             </div>
+        </section>
+
+        <!-- Panier -->
+        <section id="panier" class="card">
+            <h2>Mon Panier</h2>
+            <div id="cart-items"><p class="muted">Votre panier est vide.</p></div>
+            <div class="cart-footer">
+                <label>
+                    Mode de remise :
+                    <select id="fulfillment-type">
+                        <option value="RETRAIT">Retrait sur place</option>
+                        <option value="LIVRAISON">Livraison</option>
+                    </select>
+                </label>
+                <p class="total">Total : <strong id="cart-total">0.00 €</strong></p>
+                <button id="order-btn" disabled>Valider la commande</button>
+                <p id="order-feedback" class="feedback"></p>
+            </div>
+        </section>
+
+        <!-- Suivi commandes & notifications temps réel -->
+        <section id="suivi" class="card">
+            <h2>Suivi en direct & Notifications</h2>
+            <div id="notifications-box"></div>
+            <div id="orders-list"><p class="muted">Connectez-vous pour voir et suivre vos commandes.</p></div>
         </section>
     </main>
 
