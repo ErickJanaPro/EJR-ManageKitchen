@@ -1,3 +1,7 @@
+const RESTAURANT = { lat: 48.8566, lng: 2.3522, name: 'EJR Kitchen — Paris Centre', radiusMeters: 15000 };
+const DEFAULT_MAP_STATUS = "Zone de livraison : 15 km autour d'EJR Kitchen (Paris Centre).";
+const TRACKING_POLL_MS = 5000;
+
 const state = {
     menu: [],
     cart: new Map(),
@@ -6,7 +10,16 @@ const state = {
     token: localStorage.getItem('ejr_token'),
     user: JSON.parse(localStorage.getItem('ejr_user') || 'null'),
     registerMode: false,
-    stomp: null
+    stomp: null,
+    selectedLocation: { address: '15 Rue de Rivoli, Paris', lat: 48.8556, lng: 2.3580 },
+    locationValid: true,
+    map: null,
+    clientMarker: null,
+    courierMarker: null,
+    routeLine: null,
+    trackedOrderId: null,
+    trackingInterval: null,
+    feedbackTimer: null
 };
 
 const $ = sel => document.querySelector(sel);
@@ -25,6 +38,174 @@ async function api(path, options = {}) {
     }
     return body;
 }
+
+function setOrderFeedback(message, autoClearMs = 0) {
+    clearTimeout(state.feedbackTimer);
+    $('#order-feedback').textContent = message;
+    if (message && autoClearMs > 0) {
+        state.feedbackTimer = setTimeout(() => {
+            $('#order-feedback').textContent = '';
+        }, autoClearMs);
+    }
+}
+
+function updateOrderButtonState() {
+    const hasItems = state.cart.size > 0;
+    const isDelivery = $('#fulfillment-type')?.value === 'LIVRAISON';
+    $('#order-btn').disabled = !hasItems || (isDelivery && !state.locationValid);
+}
+
+// ---------- Carte Leaflet & Suivi (F8) ----------
+function stopTrackingPolling() {
+    if (state.trackingInterval) {
+        clearInterval(state.trackingInterval);
+        state.trackingInterval = null;
+    }
+}
+
+function startTrackingPolling(orderId) {
+    stopTrackingPolling();
+    state.trackingInterval = setInterval(() => {
+        if (state.trackedOrderId !== orderId || !state.token) {
+            stopTrackingPolling();
+            return;
+        }
+        trackDelivery(orderId, { scroll: false, recenter: false });
+    }, TRACKING_POLL_MS);
+}
+
+function clearMapTracking() {
+    stopTrackingPolling();
+    state.trackedOrderId = null;
+    if (state.courierMarker && state.map) {
+        state.map.removeLayer(state.courierMarker);
+        state.courierMarker = null;
+    }
+    $('#map-status-text').textContent = DEFAULT_MAP_STATUS;
+}
+
+function drawRouteOnMap(lat, lng, address) {
+    if (!state.map) return;
+
+    if (state.clientMarker) state.clientMarker.setLatLng([lat, lng]);
+    else state.clientMarker = L.marker([lat, lng]).addTo(state.map);
+    state.clientMarker.bindPopup(`Destination : ${esc(address)}`);
+
+    const points = [[RESTAURANT.lat, RESTAURANT.lng], [lat, lng]];
+    if (state.routeLine) state.routeLine.setLatLngs(points);
+    else state.routeLine = L.polyline(points, { color: '#e67e22', dashArray: '6, 6' }).addTo(state.map);
+}
+
+function initMap() {
+    if (typeof L === 'undefined') return;
+    state.map = L.map('delivery-map').setView([RESTAURANT.lat, RESTAURANT.lng], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap'
+    }).addTo(state.map);
+
+    L.marker([RESTAURANT.lat, RESTAURANT.lng]).addTo(state.map)
+        .bindPopup(`<strong>${esc(RESTAURANT.name)}</strong><br>Point de départ`).openPopup();
+
+    L.circle([RESTAURANT.lat, RESTAURANT.lng], {
+        radius: RESTAURANT.radiusMeters,
+        color: '#1f3a5f',
+        fillOpacity: 0.06
+    }).addTo(state.map);
+
+    updateClientPin(state.selectedLocation.lat, state.selectedLocation.lng, state.selectedLocation.address);
+
+    state.map.on('click', e => {
+        clearMapTracking();
+        setOrderFeedback('');
+        const label = `Point sélectionné (${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)})`;
+        $('#delivery-address').value = label;
+        $('#geocode-btn').disabled = true;
+        updateClientPin(e.latlng.lat, e.latlng.lng, label, true);
+    });
+}
+
+function updateClientPin(lat, lng, address, fromMapClick = false) {
+    state.selectedLocation = { address, lat, lng };
+    drawRouteOnMap(lat, lng, address);
+
+    if (!state.map) return;
+    const rawKm = state.map.distance([RESTAURANT.lat, RESTAURANT.lng], [lat, lng]) / 1000;
+    const kmRounded = Math.round(rawKm * 10) / 10;
+    const maxKm = RESTAURANT.radiusMeters / 1000;
+    const inZone = kmRounded <= maxKm;
+    state.locationValid = inZone;
+
+    const mins = Math.max(15, Math.round(10 + kmRounded * 3.5));
+    const prefix = fromMapClick ? 'Point enregistré depuis la carte (bouton « Localiser » inutile) — ' : '';
+    const infoEl = $('#delivery-zone-info');
+    infoEl.textContent = inZone
+        ? `${prefix}Distance : ${kmRounded.toFixed(1)} km — Temps estimé : ~${mins} min`
+        : `${prefix}Hors zone (${kmRounded.toFixed(1)} km > ${maxKm} km max) — Rapprochez le point pour valider la commande.`;
+    infoEl.className = inZone ? 'muted' : 'error';
+
+    updateOrderButtonState();
+}
+
+async function geocodeAddress() {
+    const query = $('#delivery-address').value.trim();
+    if (!query) return;
+    clearMapTracking();
+    const infoEl = $('#delivery-zone-info');
+    infoEl.className = 'muted';
+    infoEl.textContent = 'Recherche de l’adresse...';
+    try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`);
+        const data = await res.json();
+        if (!data.length) {
+            infoEl.textContent = 'Adresse introuvable : cliquez directement sur la carte.';
+            return;
+        }
+        const lat = Number(data[0].lat);
+        const lng = Number(data[0].lon);
+        updateClientPin(lat, lng, data[0].display_name);
+        state.map?.setView([lat, lng], 14);
+    } catch {
+        infoEl.textContent = 'Géocodage indisponible : cliquez sur la carte pour placer votre point.';
+    }
+}
+
+window.trackDelivery = async function(orderId, { scroll = true, recenter = true } = {}) {
+    try {
+        const d = await api(`/api/customer/deliveries/${orderId}`);
+        state.trackedOrderId = orderId;
+
+        if (recenter) {
+            drawRouteOnMap(d.clientLatitude, d.clientLongitude, d.address);
+        }
+
+        if (state.map) {
+            if (state.courierMarker) state.courierMarker.setLatLng([d.currentLatitude, d.currentLongitude]);
+            else state.courierMarker = L.circleMarker([d.currentLatitude, d.currentLongitude], {
+                radius: 9, color: '#166534', fillColor: '#22c55e', fillOpacity: 1
+            }).addTo(state.map);
+
+            state.courierMarker.bindPopup(`Livreur — Commande #${d.orderId} (${d.progressPercent}%)`);
+            if (recenter) {
+                state.courierMarker.openPopup();
+                state.map.setView([d.currentLatitude, d.currentLongitude], 14);
+            }
+        }
+
+        $('#map-status-text').textContent =
+            `Commande #${d.orderId} : ${d.status} (${d.progressPercent}% — ~${d.estimatedMinutes} min, ${d.distanceKm} km)`;
+
+        if (d.status === 'EN_COURS') {
+            if (!state.trackingInterval) startTrackingPolling(orderId);
+        } else {
+            stopTrackingPolling();
+        }
+
+        if (scroll) location.hash = '#carte';
+    } catch (err) {
+        stopTrackingPolling();
+        if (recenter) $('#map-status-text').textContent = err.message;
+    }
+};
 
 // ---------- Menu ----------
 async function loadMenu() {
@@ -58,6 +239,7 @@ function renderMenu() {
 window.addToCart = function(dishId) {
     const plat = state.menu.find(p => p.id === dishId);
     if (!plat || !plat.disponible) return;
+    setOrderFeedback('');
     const entry = state.cart.get(dishId);
     if (entry) entry.quantity += 1;
     else state.cart.set(dishId, { plat, quantity: 1 });
@@ -67,6 +249,7 @@ window.addToCart = function(dishId) {
 window.updateQty = function(dishId, delta) {
     const entry = state.cart.get(dishId);
     if (!entry) return;
+    setOrderFeedback('');
     entry.quantity += delta;
     if (entry.quantity <= 0) state.cart.delete(dishId);
     renderCart();
@@ -79,7 +262,7 @@ function renderCart() {
 
     $('#cart-count').textContent = count;
     $('#cart-total').textContent = `${total.toFixed(2)} €`;
-    $('#order-btn').disabled = entries.length === 0;
+    updateOrderButtonState();
 
     if (entries.length === 0) {
         $('#cart-items').innerHTML = '<p class="muted">Votre panier est vide.</p>';
@@ -99,27 +282,46 @@ function renderCart() {
 }
 
 async function submitOrder() {
-    $('#order-feedback').textContent = '';
+    setOrderFeedback('');
     if (!state.token) {
         $('#auth-panel').classList.remove('hidden');
         $('#auth-error').textContent = 'Connectez-vous pour valider votre commande.';
         return;
     }
 
+    const fulfillmentType = $('#fulfillment-type').value;
+    if (fulfillmentType === 'LIVRAISON' && !state.locationValid) {
+        setOrderFeedback('Erreur : adresse hors zone de livraison (15 km max).');
+        return;
+    }
+
     const payload = {
-        fulfillmentType: $('#fulfillment-type').value,
+        fulfillmentType,
         items: [...state.cart.values()].map(({ plat, quantity }) => ({ dishId: plat.id, quantity }))
     };
 
     try {
         const order = await api('/api/orders', { method: 'POST', body: JSON.stringify(payload) });
+        if (fulfillmentType === 'LIVRAISON') {
+            const addr = $('#delivery-address').value.trim() || state.selectedLocation.address;
+            await api('/api/customer/deliveries', {
+                method: 'POST',
+                body: JSON.stringify({
+                    orderId: order.id,
+                    address: addr,
+                    latitude: state.selectedLocation.lat,
+                    longitude: state.selectedLocation.lng
+                })
+            });
+            await trackDelivery(order.id);
+        }
         state.cart.clear();
         state.orders.set(order.id, order);
         renderCart();
         renderOrders();
-        $('#order-feedback').textContent = `Commande #${order.id} envoyée en cuisine !`;
+        setOrderFeedback(`Commande #${order.id} envoyée en cuisine !`, 6000);
     } catch (err) {
-        $('#order-feedback').textContent = `Erreur : ${err.message}`;
+        setOrderFeedback(`Erreur : ${err.message}`);
     }
 }
 
@@ -163,6 +365,8 @@ function logout() {
     state.notifications = [];
     localStorage.removeItem('ejr_token');
     localStorage.removeItem('ejr_user');
+    setOrderFeedback('');
+    clearMapTracking();
     setWsStatus(false);
     updateAuthUI();
     renderOrders();
@@ -200,6 +404,10 @@ function connectWebSocket() {
                 const msg = JSON.parse(frame.body);
                 state.orders.set(msg.order.id, msg.order);
                 renderOrders();
+                if (msg.order.fulfillmentType === 'LIVRAISON'
+                    && (msg.order.status === 'PRETE' || msg.order.status === 'LIVREE')) {
+                    trackDelivery(msg.order.id);
+                }
             });
             state.stomp.subscribe('/user/queue/notifications', frame => {
                 const notif = JSON.parse(frame.body);
@@ -252,7 +460,12 @@ function renderOrders() {
                 <span class="status-pill ${esc(o.status)}">${esc(o.status)}</span>
             </div>
             <ul>${o.items.map(i => `<li>${i.quantity} × ${esc(i.dishName)} — ${Number(i.lineTotal).toFixed(2)} €</li>`).join('')}</ul>
-            <strong>Total : ${Number(o.total).toFixed(2)} €</strong>
+            <div class="row" style="justify-content: space-between;">
+                <strong>Total : ${Number(o.total).toFixed(2)} €</strong>
+                ${o.fulfillmentType === 'LIVRAISON'
+                    ? `<button class="small secondary" onclick="trackDelivery(${o.id})">Suivre sur la carte</button>`
+                    : ''}
+            </div>
         </article>
     `).join('');
 }
@@ -273,9 +486,28 @@ document.addEventListener('DOMContentLoaded', () => {
         $('#auth-fullname').required = state.registerMode;
     });
 
+    $('#delivery-address').addEventListener('input', () => {
+        $('#geocode-btn').disabled = false;
+    });
+
+    $('#fulfillment-type').addEventListener('change', e => {
+        setOrderFeedback('');
+        const isDelivery = e.target.value === 'LIVRAISON';
+        $('#delivery-address-box').classList.toggle('hidden', !isDelivery);
+        if (isDelivery) {
+            clearMapTracking();
+            $('#delivery-address').value = state.selectedLocation.address;
+            $('#geocode-btn').disabled = false;
+            setTimeout(() => state.map?.invalidateSize(), 50);
+        }
+        updateOrderButtonState();
+    });
+
+    $('#geocode-btn').addEventListener('click', geocodeAddress);
     $('#auth-form').addEventListener('submit', handleAuthSubmit);
     $('#order-btn').addEventListener('click', submitOrder);
 
+    initMap();
     updateAuthUI();
     loadMenu();
     if (state.token) initAuthenticatedSession();
