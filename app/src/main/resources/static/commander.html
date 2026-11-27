@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>La Carte &amp; Commande — ejr kitchen</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header id="site-header"></header>
+
+    <!-- Barre fixe des catégories (Style Bao Family) -->
+    <div class="category-bar">
+        <div class="category-bar-inner">
+            <div id="category-tabs" class="category-tabs" role="tablist" aria-label="Catégories du menu">
+                <button type="button" class="cat-tab active" data-category="ALL">Toute la carte</button>
+            </div>
+            <button type="button" id="change-mode-top-btn" class="mode-chip-btn">
+                À emporter · Modifier
+            </button>
+        </div>
+    </div>
+
+    <main class="container menu-page-main">
+        <!-- Bannière de confirmation après validation de commande -->
+        <div id="order-confirm-banner" class="order-confirm-banner hidden">
+            <div>
+                <strong id="order-confirm-title">Commande envoyée en cuisine !</strong>
+                <div id="order-confirm-sub" style="font-size:0.88rem;"></div>
+            </div>
+            <a id="order-confirm-link" href="suivi.html" class="btn btn-dark" style="padding:0.55rem 1.2rem;">
+                Suivre en direct →
+            </a>
+        </div>
+
+        <!-- Emplacement prêt pour F9 (Profil alimentaire & Recommandations) -->
+        <section id="f9-recommendations-slot" class="f9-banner">
+            <div>
+                <strong>Suggestions personnalisées &amp; filtres allergènes</strong>
+                <p>Renseignez vos préférences alimentaires dans votre profil pour filtrer automatiquement la carte.</p>
+            </div>
+            <a href="profil.html" class="btn btn-outline" style="padding:0.5rem 1.1rem; font-size:0.84rem;">
+                Mon profil
+            </a>
+        </section>
+
+        <!-- Liste des plats groupés par catégorie -->
+        <div id="menu-sections">
+            <p style="color:var(--muted); padding:2.5rem 0;">Chargement de la carte...</p>
+        </div>
+    </main>
+
+    <!-- Bandeau inférieur fixe (Style Bao Family) -->
+    <!-- Bandeau inférieur fixe réductible -->
+    <div id="order-bottom-bar" class="order-bottom-bar">
+        <div class="order-bottom-inner">
+            <div class="bottom-bar-info">
+                <button type="button" id="bottom-mode-btn" class="bottom-bar-trigger">
+                    <span id="bottom-mode-icon" class="bottom-bar-icon">🛍</span>
+                    <span id="bottom-mode-label" class="bottom-mode-label">À emporter — Paris Marais</span>
+                </button>
+                <span class="bottom-bar-pill">
+                    <span class="bottom-bar-icon">⏱</span>
+                    <span id="bottom-eta-label">Dès que possible</span>
+                </span>
+            </div>
+            <div class="bottom-bar-actions">
+                <button type="button" id="bottom-cart-btn" class="btn btn-primary" style="padding:0.6rem 1.2rem;">
+                    Panier (<span id="bottom-cart-count">0</span>) · <span id="bottom-cart-total">0,00 €</span>
+                </button>
+                <button type="button"
+                        id="collapse-bottom-bar-btn"
+                        class="bottom-bar-minimize"
+                        title="Réduire le bandeau"
+                        aria-label="Réduire le bandeau">
+                    ▾
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bouton rond flottant lorsque le bandeau est réduit -->
+    <button type="button"
+            id="expand-bottom-bar-btn"
+            class="order-bar-fab hidden"
+            title="Afficher le mode de livraison et le panier"
+            aria-label="Afficher le mode de livraison et le panier">
+        <span id="fab-mode-icon">🛍</span>
+        <span id="fab-cart-badge" class="fab-badge hidden">0</span>
+    </button>
+
+    <!-- Modale de choix de commande (Style Bao Family) -->
+    <div id="order-mode-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-label="Mode de commande">
+        <div class="modal-card">
+            <button type="button" id="close-modal-btn" class="modal-close" aria-label="Fermer">&times;</button>
+
+            <div class="pill-switch" role="tablist">
+                <button type="button" id="tab-retrait" class="active" data-mode="RETRAIT">À emporter</button>
+                <button type="button" id="tab-livraison" data-mode="LIVRAISON">Livraison</button>
+            </div>
+
+            <!-- Bloc Retrait sur place -->
+            <div id="modal-retrait-box" style="text-align:center; padding:0.5rem 0 0.25rem;">
+                <p style="margin:0; font-weight:700;">EJR Kitchen — Paris Centre</p>
+                <p style="margin:0.3rem 0 0; color:var(--muted); font-size:0.9rem;">
+                    12 Rue des Archives, 75004 Paris · Prêt en ~15 min
+                </p>
+            </div>
+
+            <!-- Bloc Livraison -->
+            <div id="modal-livraison-box" class="hidden">
+                <label class="modal-field-label" for="modal-address">Adresse de livraison</label>
+                <div class="address-input-row">
+                    <input id="modal-address" type="text" class="modal-input" placeholder="Ex. 15 Rue de Rivoli, Paris">
+                    <button type="button" id="modal-search-btn" class="btn btn-outline" style="padding:0.6rem 1rem;">
+                        Chercher
+                    </button>
+                </div>
+
+                <button type="button" id="modal-geolocate-btn" class="btn-geolocate">
+                    ⌖ Me géolocaliser
+                </button>
+
+                <div id="modal-mini-map" class="mini-map" title="Cliquez sur la carte pour ajuster le point"></div>
+                <p id="modal-zone-status" class="zone-status">
+                    Cliquez sur la carte ou saisissez une adresse (15 km max).
+                </p>
+
+                <label class="modal-field-label" for="modal-instructions">Instructions de livraison (optionnel)</label>
+                <textarea id="modal-instructions" class="modal-textarea" placeholder="Digicode, étage, bâtiment..."></textarea>
+            </div>
+
+            <label class="modal-field-label">Pour quand ?</label>
+            <div class="when-pill">Dès que possible (préparation minute)</div>
+
+            <button type="button" id="modal-validate-btn" class="btn btn-primary modal-submit">
+                Valider
+            </button>
+        </div>
+    </div>
+
+    <footer id="site-footer"></footer>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="core.js"></script>
+    <script src="commander.js"></script>
+</body>
+</html>

@@ -7,6 +7,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.List;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -33,8 +35,20 @@ class CustomerControllerTest {
     }
 
     @Test
-    void laPageAccueilClientEstAccessiblePubliquement() throws Exception {
-        mvc.perform(get("/index.html"))
-                .andExpect(status().isOk());
+    void lesPagesClientEtAssetsCommunsSontAccessiblesPubliquement() throws Exception {
+        List<String> publicPaths = List.of(
+                "/index.html",
+                "/commander.html",
+                "/reserver.html",
+                "/suivi.html",
+                "/profil.html",
+                "/style.css",
+                "/core.js"
+        );
+
+        for (String path : publicPaths) {
+            mvc.perform(get(path))
+                    .andExpect(status().isOk());
+        }
     }
 }
