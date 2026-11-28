@@ -3,15 +3,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const $ = id => document.getElementById(id);
 
-    const LUNCH_SLOTS = ['12:00', '12:45', '13:30'];
-    const DINNER_SLOTS = ['19:30', '20:30', '21:30'];
     const MIN_GUESTS = 1;
     const MAX_GUESTS = 12;
 
     const state = {
         date: todayIso(),
         guests: 2,
-        selectedSlot: '19:30'
+        slots: [],
+        selectedSlot: null,
+        loadingSlots: false,
+        submitting: false
     };
 
     function todayIso() {
@@ -32,6 +33,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function isSlotSelectable(slot) {
+        return Boolean(slot && slot.available && slot.remainingSeats >= state.guests);
+    }
+
     // ---------- Carte Leaflet ----------
     function initRestaurantMap() {
         if (typeof L === 'undefined') return;
@@ -46,7 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
             .openPopup();
     }
 
-    // ---------- Sélecteurs couverts & créneaux ----------
+    // ---------- Disponibilités & rendu des créneaux ----------
     function renderGuests() {
         $('guests-label').textContent = state.guests > 1
             ? `${state.guests} personnes`
@@ -55,27 +60,80 @@ document.addEventListener('DOMContentLoaded', () => {
         $('guests-plus').disabled = state.guests >= MAX_GUESTS;
     }
 
-    function renderSlotGroup(containerId, slots) {
-        $(containerId).innerHTML = slots.map(slot => {
-            const active = state.selectedSlot === slot;
+    function syncSelectedSlot() {
+        const current = state.slots.find(s => s.timeSlot === state.selectedSlot);
+        if (!isSlotSelectable(current)) {
+            const firstValid = state.slots.find(isSlotSelectable);
+            state.selectedSlot = firstValid ? firstValid.timeSlot : null;
+        }
+        $('res-submit-btn').disabled = state.loadingSlots || state.submitting || !state.selectedSlot;
+    }
+
+    function slotSubLabel(slot) {
+        if (!slot.available) {
+            return slot.remainingSeats === 0 ? 'Complet' : 'Passé';
+        }
+        if (slot.remainingSeats < state.guests) {
+            return `${slot.remainingSeats} pl. (trop juste)`;
+        }
+        return `${slot.remainingSeats} place${slot.remainingSeats > 1 ? 's' : ''}`;
+    }
+
+    function renderSlotGroup(containerId, service) {
+        const list = state.slots.filter(s => s.service === service);
+        if (list.length === 0) {
+            $(containerId).innerHTML = '<span style="color:var(--muted); font-size:0.86rem;">Aucun créneau.</span>';
+            return;
+        }
+
+        $(containerId).innerHTML = list.map(slot => {
+            const selectable = isSlotSelectable(slot);
+            const active = selectable && state.selectedSlot === slot.timeSlot;
             return `
                 <button type="button"
                         class="slot-btn ${active ? 'active' : ''}"
-                        data-slot="${EJR.esc(slot)}"
-                        aria-pressed="${String(active)}">
-                    <strong>${EJR.esc(slot)}</strong>
-                    <span>Disponible</span>
+                        data-slot="${EJR.esc(slot.timeSlot)}"
+                        aria-pressed="${String(active)}"
+                        ${selectable ? '' : 'disabled'}>
+                    <strong>${EJR.esc(slot.timeSlot)}</strong>
+                    <span>${EJR.esc(slotSubLabel(slot))}</span>
                 </button>
             `;
         }).join('');
     }
 
     function renderAllSlots() {
-        renderSlotGroup('slots-lunch', LUNCH_SLOTS);
-        renderSlotGroup('slots-dinner', DINNER_SLOTS);
+        syncSelectedSlot();
+        renderSlotGroup('slots-lunch', 'DEJEUNER');
+        renderSlotGroup('slots-dinner', 'DINER');
     }
 
-    // ---------- Initialisation formulaire ----------
+    async function loadAvailability() {
+        state.loadingSlots = true;
+        $('res-submit-btn').disabled = true;
+        $('slots-lunch').innerHTML = '<span style="color:var(--muted); font-size:0.86rem;">Chargement...</span>';
+        $('slots-dinner').innerHTML = '<span style="color:var(--muted); font-size:0.86rem;">Chargement...</span>';
+
+        try {
+            state.slots = await EJR.api(`/api/customer/reservations/availability?date=${encodeURIComponent(state.date)}`);
+        } catch (err) {
+            state.slots = [];
+            showFeedback(`Impossible de charger les disponibilités : ${err.message}`, 'error');
+        } finally {
+            state.loadingSlots = false;
+            renderAllSlots();
+        }
+    }
+
+    function showFeedback(htmlOrText, kind = 'success', isHtml = false) {
+        const el = $('res-feedback');
+        el.className = `reserve-feedback ${kind}`;
+        if (isHtml) el.innerHTML = htmlOrText;
+        else el.textContent = htmlOrText;
+        el.classList.remove('hidden');
+    }
+
+    // ---------- Événements ----------
     const dateInput = $('res-date');
     dateInput.min = state.date;
     dateInput.value = state.date;
@@ -83,12 +141,14 @@ document.addEventListener('DOMContentLoaded', () => {
     dateInput.addEventListener('change', () => {
         state.date = dateInput.value || todayIso();
         $('res-feedback').classList.add('hidden');
+        loadAvailability();
     });
 
     $('guests-minus').addEventListener('click', () => {
         if (state.guests > MIN_GUESTS) {
             state.guests -= 1;
             renderGuests();
+            renderAllSlots();
         }
     });
 
@@ -96,44 +156,87 @@ document.addEventListener('DOMContentLoaded', () => {
         if (state.guests < MAX_GUESTS) {
             state.guests += 1;
             renderGuests();
+            renderAllSlots();
         }
     });
 
     document.addEventListener('click', e => {
         const slotBtn = e.target.closest('button[data-slot]');
-        if (!slotBtn) return;
+        if (!slotBtn || slotBtn.disabled) return;
         state.selectedSlot = slotBtn.dataset.slot;
         renderAllSlots();
     });
 
-    $('reservation-form').addEventListener('submit', e => {
+    $('reservation-form').addEventListener('submit', async e => {
         e.preventDefault();
+        if (state.submitting) return;
 
         if (!EJR.getToken()) {
-            EJR.toast('Connectez-vous pour réserver une table');
+            EJR.toast('Connectez-vous pour confirmer votre réservation');
             setTimeout(() => {
                 location.href = 'profil.html?redirect=reserver.html';
             }, 650);
             return;
         }
 
-        const feedback = $('res-feedback');
-        const guestText = state.guests > 1 ? `${state.guests} couverts` : '1 couvert';
-        const user = EJR.getUser();
-        const clientLabel = user?.fullName ? ` au nom de ${user.fullName}` : '';
+        if (!state.selectedSlot) {
+            showFeedback('Aucun créneau disponible pour ce nombre de couverts à cette date.', 'error');
+            return;
+        }
 
-        feedback.className = 'reserve-feedback success';
-        feedback.innerHTML = `
-            <strong>Pré-validation enregistrée${EJR.esc(clientLabel)}</strong><br>
-            ${EJR.esc(formatDateFr(state.date))} à <strong>${EJR.esc(state.selectedSlot)}</strong> (${EJR.esc(guestText)}).
-            <div style="margin-top:0.4rem; font-size:0.82rem; opacity:0.85;">
-                L'enregistrement en base et le calcul des places restantes seront activés dès le ticket <em>Réservation de table</em> (<code>/api/customer/reservations</code>).
-            </div>
-        `;
-        feedback.classList.remove('hidden');
+        state.submitting = true;
+        const btn = $('res-submit-btn');
+        btn.disabled = true;
+        btn.textContent = 'Confirmation en cours...';
+
+        const user = EJR.getUser();
+        const payload = {
+            reservationDate: state.date,
+            timeSlot: state.selectedSlot,
+            guestsCount: state.guests,
+            clientName: user?.fullName || null,
+            notes: $('res-notes').value.trim() || null
+        };
+
+        try {
+            const created = await EJR.api('/api/customer/reservations', {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
+
+            const guestText = created.guestsCount > 1
+                ? `${created.guestsCount} couverts`
+                : '1 couvert';
+
+            showFeedback(`
+                <strong>Réservation #${Number(created.id)} confirmée !</strong><br>
+                ${EJR.esc(formatDateFr(created.reservationDate))} à <strong>${EJR.esc(created.timeSlot)}</strong> (${EJR.esc(guestText)}).
+                <div style="margin-top:0.65rem;">
+                    <a href="profil.html" class="editorial-link">Gérer mes réservations →</a>
+                </div>
+            `, 'success', true);
+
+            $('res-notes').value = '';
+            EJR.toast('Table réservée !');
+            await loadAvailability();
+        } catch (err) {
+            if (err.status === 401) {
+                EJR.clearSession();
+                EJR.toast('Session expirée — reconnectez-vous');
+                location.href = 'profil.html?redirect=reserver.html';
+                return;
+            }
+            showFeedback(err.message || 'Impossible de finaliser la réservation.', 'error');
+            await loadAvailability();
+        } finally {
+            state.submitting = false;
+            btn.textContent = 'Confirmer ma réservation';
+            syncSelectedSlot();
+        }
     });
 
+    // ---------- Initialisation ----------
     initRestaurantMap();
     renderGuests();
-    renderAllSlots();
+    loadAvailability();
 });

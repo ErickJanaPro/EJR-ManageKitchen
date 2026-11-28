@@ -52,7 +52,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/users/me").authenticated()
                         .requestMatchers("/api/users/**").hasRole("ADMIN")
                         // Domaine customer (Dev 3) : le menu se consulte sans compte
-                        .requestMatchers(HttpMethod.GET, "/api/customer/menu").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/customer/menu", "/api/customer/reservations/availability").permitAll()
                         // TODO Dev 1 : back-office (/api/suppliers...) => hasRole("ADMIN") une fois le front admin prêt
                         .anyRequest().authenticated())
                 .exceptionHandling(ex -> ex

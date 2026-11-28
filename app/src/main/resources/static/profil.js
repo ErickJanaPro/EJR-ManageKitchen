@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const $ = id => document.getElementById(id);
     let registerMode = false;
+    let reservations = [];
 
     const ALLOWED_REDIRECT = /^(index|commander|suivi|reserver|profil)\.html(\?[a-zA-Z0-9_=&%-]*)?$/;
 
@@ -10,6 +11,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         const raw = new URLSearchParams(location.search).get('redirect');
         if (!raw) return null;
         return ALLOWED_REDIRECT.test(raw) ? raw : null;
+    }
+
+    function formatDateFr(iso) {
+        const [y, m, d] = String(iso || '').split('-').map(Number);
+        if (!y || !m || !d) return iso || '';
+        return new Date(y, m - 1, d).toLocaleDateString('fr-FR', {
+            weekday: 'short',
+            day: 'numeric',
+            month: 'short'
+        });
     }
 
     function setAuthMode(isRegister) {
@@ -40,6 +51,61 @@ document.addEventListener('DOMContentLoaded', async () => {
         el.classList.add('hidden');
     }
 
+    // ---------- Mes réservations de table ----------
+    function renderReservations() {
+        const listEl = $('my-reservations-list');
+        const countEl = $('reservations-count');
+        const activeCount = reservations.filter(r => r.status === 'CONFIRMEE').length;
+        if (countEl) countEl.textContent = String(activeCount);
+
+        if (!listEl) return;
+        if (reservations.length === 0) {
+            listEl.innerHTML = '<p style="color:var(--muted); font-size:0.9rem; margin:0;">Aucune table réservée pour le moment.</p>';
+            return;
+        }
+
+        listEl.innerHTML = reservations.map(r => {
+            const isCancelled = r.status === 'ANNULEE';
+            const guestLabel = r.guestsCount > 1 ? `${r.guestsCount} couverts` : '1 couvert';
+            const badgeClass = isCancelled ? 'ANNULEE' : 'LIVREE';
+            const badgeText = isCancelled ? 'Annulée' : 'Confirmée';
+
+            return `
+                <div class="reservation-row ${isCancelled ? 'cancelled' : ''}">
+                    <div class="reservation-row-info">
+                        <strong>${EJR.esc(formatDateFr(r.reservationDate))} · ${EJR.esc(r.timeSlot)}</strong>
+                        <span class="reservation-row-meta">
+                            ${EJR.esc(guestLabel)}${r.notes ? ` · ${EJR.esc(r.notes)}` : ''}
+                        </span>
+                    </div>
+                    <div class="reservation-row-actions">
+                        <span class="status-badge ${badgeClass}">${badgeText}</span>
+                        ${!isCancelled ? `
+                            <button type="button"
+                                    class="btn btn-outline btn-sm"
+                                    data-cancel-reservation="${Number(r.id)}">
+                                Annuler
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    async function loadMyReservations() {
+        if (!EJR.getToken()) return;
+        try {
+            reservations = await EJR.api('/api/customer/reservations/me');
+            renderReservations();
+        } catch (err) {
+            const listEl = $('my-reservations-list');
+            if (listEl) {
+                listEl.innerHTML = `<p style="color:var(--danger); font-size:0.88rem; margin:0;">${EJR.esc(err.message)}</p>`;
+            }
+        }
+    }
+
     function renderAccount() {
         const user = EJR.getUser();
         const isLoggedIn = Boolean(EJR.getToken() && user);
@@ -47,7 +113,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         $('auth-view').classList.toggle('hidden', isLoggedIn);
         $('account-view').classList.toggle('hidden', !isLoggedIn);
 
-        if (!isLoggedIn) return;
+        if (!isLoggedIn) {
+            reservations = [];
+            return;
+        }
 
         const name = user.fullName || user.email || 'Client';
         $('profile-avatar').textContent = name.trim().charAt(0).toUpperCase();
@@ -58,6 +127,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         $('profile-mode-pill').textContent = prefs.fulfillmentType === 'LIVRAISON' ? 'Livraison' : 'À emporter';
         $('saved-address').value = prefs.address || '';
         $('saved-instructions').value = prefs.instructions || '';
+
+        loadMyReservations();
     }
 
     // ---------- Événements ----------
@@ -117,6 +188,22 @@ document.addEventListener('DOMContentLoaded', async () => {
             instructions: $('saved-instructions').value.trim()
         });
         EJR.toast('Adresse enregistrée');
+    });
+
+    $('my-reservations-list')?.addEventListener('click', async e => {
+        const btn = e.target.closest('button[data-cancel-reservation]');
+        if (!btn) return;
+        const id = Number(btn.dataset.cancelReservation);
+        btn.disabled = true;
+        try {
+            const updated = await EJR.api(`/api/customer/reservations/${id}/cancel`, { method: 'PATCH' });
+            reservations = reservations.map(r => r.id === id ? updated : r);
+            renderReservations();
+            EJR.toast('Réservation annulée');
+        } catch (err) {
+            btn.disabled = false;
+            EJR.toast(err.message || 'Erreur lors de l\'annulation');
+        }
     });
 
     // ---------- Vérification de session au chargement ----------
