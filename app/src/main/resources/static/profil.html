@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mon Compte — ejr kitchen</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header id="site-header"></header>
+
+    <main class="container profile-page">
+        <!-- Vue non connectée : Connexion / Inscription JWT -->
+        <section id="auth-view" class="auth-shell hidden">
+            <div class="auth-card">
+                <div class="auth-switch-tabs" role="tablist">
+                    <button type="button" id="auth-tab-login" class="active" role="tab">Connexion</button>
+                    <button type="button" id="auth-tab-register" role="tab">Inscription</button>
+                </div>
+
+                <h1 id="auth-heading">Bon retour parmi nous</h1>
+                <p id="auth-sub" class="auth-sub">
+                    Connectez-vous pour commander, suivre vos livraisons en direct et gérer vos réservations.
+                </p>
+
+                <form id="auth-form">
+                    <div id="fullname-group" class="form-group hidden">
+                        <label for="auth-fullname">Nom complet</label>
+                        <input id="auth-fullname" type="text" class="form-input" placeholder="Ex. Camille Laurent" autocomplete="name">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="auth-email">Adresse e-mail</label>
+                        <input id="auth-email" type="email" class="form-input" placeholder="client@ejr.local" autocomplete="email" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="auth-password">Mot de passe</label>
+                        <input id="auth-password" type="password" class="form-input" placeholder="Votre mot de passe" autocomplete="current-password" required minlength="6">
+                    </div>
+
+                    <p id="auth-error" class="form-error hidden" role="alert"></p>
+
+                    <button type="submit" id="auth-submit-btn" class="btn btn-primary" style="width:100%; margin-top:0.4rem;">
+                        Se connecter
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- Vue connectée : Mon Espace Client -->
+        <section id="account-view" class="hidden">
+            <div class="profile-banner">
+                <div class="profile-identity">
+                    <div id="profile-avatar" class="profile-avatar">E</div>
+                    <div>
+                        <h1 id="profile-name">Client</h1>
+                        <p id="profile-email">—</p>
+                    </div>
+                </div>
+                <div class="quick-links-row">
+                    <a href="suivi.html" class="btn btn-dark btn-sm">Suivre mes commandes</a>
+                    <a href="commander.html" class="btn btn-outline btn-sm">Commander</a>
+                    <button type="button" id="logout-btn" class="btn btn-outline btn-sm">Déconnexion</button>
+                </div>
+            </div>
+
+            <div class="profile-grid">
+                <!-- Emplacement F9a : Profil alimentaire -->
+                <article class="profile-card" id="dietary-profile-slot">
+                    <div>
+                        <div class="profile-card-head">
+                            <h2>Profil alimentaire &amp; allergies</h2>
+                            <span class="soon-pill">F9a</span>
+                        </div>
+                        <p style="color:var(--muted); font-size:0.9rem; margin:0.65rem 0 1rem;">
+                            Enregistrez bientôt votre régime et vos allergènes pour filtrer automatiquement la carte et personnaliser vos recommandations.
+                        </p>
+                        <div class="chip-list" aria-hidden="true">
+                            <span class="diet-chip">Végétarien</span>
+                            <span class="diet-chip">Sans gluten</span>
+                            <span class="diet-chip">Sans lactose</span>
+                            <span class="diet-chip">Allergie fruits à coque</span>
+                        </div>
+                    </div>
+                    <p style="margin:0; font-size:0.82rem; color:var(--muted);">
+                        Sera relié à <code>GET / PUT /api/customer/profile</code>.
+                    </p>
+                </article>
+
+                <!-- Emplacement Ticket Réservations : Mes réservations de table -->
+                <article class="profile-card" id="reservations-slot">
+                    <div>
+                        <div class="profile-card-head">
+                            <h2>Mes réservations de table</h2>
+                            <span class="soon-pill">Salle</span>
+                        </div>
+                        <p style="color:var(--muted); font-size:0.9rem; margin:0.65rem 0 1rem;">
+                            Retrouvez ici vos prochaines tables réservées au 12 Rue des Archives et annulez-les en un clic si besoin.
+                        </p>
+                    </div>
+                    <div>
+                        <a href="reserver.html" class="btn btn-outline btn-sm">Réserver une table →</a>
+                    </div>
+                </article>
+
+                <!-- Adresse de livraison favorite (déjà fonctionnelle via localStorage) -->
+                <article class="profile-card" style="grid-column: 1 / -1;">
+                    <div class="profile-card-head">
+                        <h2>Adresse de livraison enregistrée</h2>
+                        <span id="profile-mode-pill" class="count-pill">À emporter</span>
+                    </div>
+                    <form id="saved-address-form" style="display:grid; grid-template-columns: 1.5fr 1fr auto; gap:0.75rem; align-items:end;">
+                        <div class="form-group" style="margin:0;">
+                            <label for="saved-address">Adresse par défaut</label>
+                            <input id="saved-address" type="text" class="form-input" placeholder="15 Rue de Rivoli, Paris">
+                        </div>
+                        <div class="form-group" style="margin:0;">
+                            <label for="saved-instructions">Instructions (digicode, étage...)</label>
+                            <input id="saved-instructions" type="text" class="form-input" placeholder="Ex. Bât. B, 3e étage">
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="height:46px;">Enregistrer</button>
+                    </form>
+                </article>
+            </div>
+        </section>
+    </main>
+
+    <footer id="site-footer"></footer>
+
+    <script src="core.js"></script>
+    <script src="profil.js"></script>
+</body>
+</html>

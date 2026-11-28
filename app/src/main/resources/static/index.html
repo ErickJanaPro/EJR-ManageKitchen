@@ -3,95 +3,132 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EJR - Restauration Connectée</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <title>ejr kitchen — Cuisine fraîche à Paris</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;1,400;1,600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
-    <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7.0.0/bundles/stomp.umd.min.js"></script>
 </head>
 <body>
+    <header id="site-header"></header>
 
-    <nav class="navbar">
-        <div class="logo">EJR Kitchen</div>
-        <ul class="nav-links">
-            <li><a href="#menu">Notre Menu</a></li>
-            <li><a href="#panier">Mon Panier (<span id="cart-count">0</span>)</a></li>
-            <li><a href="#suivi">Mes Commandes</a></li>
-            <li><span id="ws-badge" class="badge off">Hors ligne</span></li>
-            <li><button id="auth-toggle-btn" class="nav-btn">Connexion</button></li>
-        </ul>
-    </nav>
-
-    <main class="layout">
-        <!-- Bloc Connexion / Inscription -->
-        <section id="auth-panel" class="card hidden">
-            <h2 id="auth-title">Connexion client</h2>
-            <form id="auth-form">
-                <input id="auth-fullname" type="text" placeholder="Nom complet" class="hidden">
-                <input id="auth-email" type="email" placeholder="E-mail" value="client@ejr.local" required>
-                <input id="auth-password" type="password" placeholder="Mot de passe" value="password123" required>
-                <div class="row">
-                    <button type="submit" id="auth-submit">Se connecter</button>
-                    <button type="button" id="auth-switch" class="secondary">Créer un compte</button>
+    <main>
+        <!-- Hero plein écran (Style Season Paris) -->
+        <section class="hero">
+            <img class="hero-bg"
+                 src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1800&q=80"
+                 alt="Table gourmande EJR Kitchen">
+            <div class="hero-content">
+                <h1 class="hero-title">À table, tout commence.</h1>
+                <p class="hero-subtitle">Cuisine minute &amp; suivi en direct · Paris Marais</p>
+                <div class="hero-actions">
+                    <a href="commander.html" class="btn btn-primary">Commander en ligne</a>
+                    <a href="reserver.html" class="btn btn-outline-light">Réserver une table</a>
                 </div>
-                <p id="auth-error" class="error"></p>
-            </form>
+            </div>
+            <a href="#univers" class="scroll-cue">← Scroll down</a>
         </section>
 
-        <!-- Menu -->
-        <section id="menu">
-            <h2>À la carte aujourd'hui</h2>
-            <div id="menu-container" class="menu-grid">
-                <p>Chargement du menu en cours...</p>
+       <!-- Bandeau de repères EJR Kitchen -->
+        <section id="univers" class="pillars-strip">
+            <div class="container pillars-grid">
+                <div class="pillar-item">
+                    <span class="pillar-index">01</span>
+                    <div>
+                        <strong>Cuisine minute</strong>
+                        <p>Produits frais préparés à la commande, chaque jour.</p>
+                    </div>
+                </div>
+                <div class="pillar-item">
+                    <span class="pillar-index">02</span>
+                    <div>
+                        <strong>Livraison Paris & petite couronne</strong>
+                        <p>Suivi carte GPS en direct dans un rayon de 15 km.</p>
+                    </div>
+                </div>
+                <div class="pillar-item">
+                    <span class="pillar-index">03</span>
+                    <div>
+                        <strong>Sur place ou à emporter</strong>
+                        <p>12 Rue des Archives, Paris 4e · 11h30 – 22h30.</p>
+                    </div>
+                </div>
             </div>
         </section>
 
+        <!-- Grille Bento asymétrique (Identité EJR Kitchen) -->
+        <section class="section">
+            <div class="container">
+                <div class="bento-grid">
+                    <!-- Grande carte gauche : La Carte -->
+                    <a href="commander.html" class="bento-card bento-featured">
+                        <img class="bento-bg"
+                             src="https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?auto=format&fit=crop&w=1000&q=80"
+                             alt="Notre carte fraîche du jour">
+                        <div class="bento-overlay">
+                            <span class="bento-tag">À emporter · Livraison</span>
+                            <h2>Une carte courte,<br>pensée pour aujourd'hui.</h2>
+                            <p>Commandez en quelques clics, indiquez vos préférences et profitez d'un retrait express ou d'une livraison suivie.</p>
+                            <span class="bento-cta">Explorer la carte</span>
+                        </div>
+                    </a>
 
-        <!-- Suivi commandes & notifications temps réel -->
-        <section id="suivi" class="card">
-            <h2>Suivi en direct & Notifications</h2>
-            <div id="notifications-box"></div>
-            <div id="orders-list"><p class="muted">Connectez-vous pour voir et suivre vos commandes.</p></div>
+                    <!-- Colonne droite empilée -->
+                    <div class="bento-stack">
+                        <!-- Haut droit : Réserver -->
+                        <a href="reserver.html" class="bento-card bento-split">
+                            <div class="bento-split-text">
+                                <span class="bento-tag-soft">Salle · Paris 4e</span>
+                                <h3>Réserver une table</h3>
+                                <p>Déjeuner sur le pouce ou dîner au calme au cœur du Marais.</p>
+                                <span class="bento-link-inline">Choisir un créneau →</span>
+                            </div>
+                            <img class="bento-split-img"
+                                 src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=700&q=80"
+                                 alt="Salle du restaurant EJR Kitchen">
+                        </a>
+
+                        <!-- Bas droit : Suivi temps réel -->
+                        <a href="suivi.html" class="bento-card bento-dark">
+                            <div class="bento-dark-top">
+                                <span class="bento-live-pill">
+                                    <span class="live-dot"></span> Temps réel
+                                </span>
+                            </div>
+                            <h3>De la cuisine jusqu'à votre porte</h3>
+                            <p>Suivez l'avancement en cuisine et la progression du livreur sur la carte sans rafraîchir.</p>
+                            <div class="mini-stepper" aria-hidden="true">
+                                <span class="step-done">Reçue</span>
+                                <span class="step-done">En cuisine</span>
+                                <span class="step-active">Prête</span>
+                                <span>Livrée</span>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Aperçu dynamique du menu (branché sur GET /api/customer/menu) -->
+        <section class="section section-cream">
+            <div class="container">
+                <div class="section-head">
+                    <div>
+                        <p class="section-eyebrow">En cuisine aujourd'hui</p>
+                        <h2 class="section-title">Nos plats du moment</h2>
+                    </div>
+                    <a href="commander.html" class="editorial-link">Voir toute la carte</a>
+                </div>
+                <div id="home-menu-grid" class="dish-preview-grid">
+                    <p style="color:var(--muted);">Chargement de la carte...</p>
+                </div>
+            </div>
         </section>
     </main>
 
-    <!-- Panier -->
-        <section id="panier" class="card">
-            <h2>Mon Panier</h2>
-            <div id="cart-items"><p class="muted">Votre panier est vide.</p></div>
-            <div id="delivery-address-box" class="delivery-box hidden">
-                <label for="delivery-address">
-                    <strong>Adresse de livraison</strong> — saisissez une adresse puis cliquez sur <em>Localiser</em>,
-                    <strong>ou cliquez directement sur la carte</strong> (le point est enregistré automatiquement, sans cliquer sur <em>Localiser</em>) :
-                </label>
-                <div class="row" style="margin-top:0.4rem;">
-                    <input id="delivery-address" type="text" placeholder="Ex. 15 Rue de Rivoli, Paris" style="flex:1;">
-                    <button type="button" id="geocode-btn" class="secondary">Localiser</button>
-                </div>
-                <p id="delivery-zone-info" class="muted" style="margin:0.4rem 0 0;"></p>
-            </div>
-            <div class="cart-footer">
-                <label>
-                    Mode de remise :
-                    <select id="fulfillment-type">
-                        <option value="RETRAIT">Retrait sur place</option>
-                        <option value="LIVRAISON">Livraison</option>
-                    </select>
-                </label>
-                <p class="total">Total : <strong id="cart-total">0.00 €</strong></p>
-                <button id="order-btn" disabled>Valider la commande</button>
-                <p id="order-feedback" class="feedback"></p>
-            </div>
-        </section>
+    <footer id="site-footer"></footer>
 
-        <!-- Carte & Suivi de livraison (F8) -->
-        <section id="carte" class="card">
-            <h2>Carte & Suivi de livraison</h2>
-            <p class="muted" id="map-status-text">Zone de livraison : 15 km autour d'EJR Kitchen (Paris Centre).</p>
-            <div id="delivery-map"></div>
-        </section>
-
-
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="app.js"></script>
+    <script src="core.js"></script>
+    <script src="home.js"></script>
 </body>
 </html>

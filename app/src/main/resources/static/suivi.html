@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suivi en direct — ejr kitchen</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header id="site-header"></header>
+
+    <main class="container tracking-page">
+        <div class="tracking-head">
+            <div>
+                <p class="section-eyebrow">De la cuisine jusqu'à votre porte</p>
+                <h1 class="section-title">Suivi de commande en direct</h1>
+            </div>
+            <div id="suivi-ws-pill" class="ws-status-pill">
+                <span class="dot"></span>
+                <span id="suivi-ws-label">Hors ligne</span>
+            </div>
+        </div>
+
+        <div class="tracking-split">
+            <!-- Colonne gauche : Notifications, commandes actives & historique -->
+            <div class="tracking-panel">
+                <!-- État non connecté -->
+                <section id="suivi-guest-card" class="tracking-card tracking-card-cream hidden">
+                    <h2 style="margin:0 0 0.5rem;">Connectez-vous pour suivre vos commandes</h2>
+                    <p style="margin:0 0 1.25rem; color:var(--muted); font-size:0.92rem;">
+                        Retrouvez l'avancement en direct de votre préparation en cuisine, vos notifications et la position de votre livreur sur la carte.
+                    </p>
+                    <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+                        <a href="profil.html?redirect=suivi.html" class="btn btn-primary btn-sm">Se connecter</a>
+                        <a href="commander.html" class="btn btn-outline btn-sm">Voir la carte</a>
+                    </div>
+                </section>
+
+                <!-- Contenu authentifié -->
+                <!-- Contenu authentifié -->
+                <div id="suivi-auth-content" class="tracking-panel hidden">
+                    <!-- Notifications non lues -->
+                    <section id="notifs-section" class="tracking-card hidden">
+                        <div class="panel-heading">
+                            <h2>Notifications</h2>
+                            <span id="notifs-count" class="count-pill">0</span>
+                        </div>
+                        <div id="notifs-list" class="notif-list"></div>
+                    </section>
+
+                    <!-- Onglets En cours / Historique -->
+                    <section class="tracking-card">
+                        <div class="tracking-tabs" role="tablist" aria-label="Filtrer les commandes">
+                            <button type="button"
+                                    id="tab-orders-active"
+                                    class="tracking-tab-btn active"
+                                    role="tab"
+                                    aria-selected="true"
+                                    data-orders-tab="active">
+                                En cours <span id="active-orders-count" class="tab-count">0</span>
+                            </button>
+                            <button type="button"
+                                    id="tab-orders-history"
+                                    class="tracking-tab-btn"
+                                    role="tab"
+                                    aria-selected="false"
+                                    data-orders-tab="history">
+                                Historique <span id="past-orders-count" class="tab-count">0</span>
+                            </button>
+                        </div>
+
+                        <!-- Panneau En cours -->
+                        <div id="panel-orders-active" role="tabpanel">
+                            <div id="active-orders-list" class="orders-stack">
+                                <p style="color:var(--muted); margin:0;">Chargement de vos commandes...</p>
+                            </div>
+                        </div>
+
+                        <!-- Panneau Historique (accordéon + lots de 5) -->
+                        <div id="panel-orders-history" class="hidden" role="tabpanel">
+                            <div id="past-orders-list" class="orders-stack">
+                                <p style="color:var(--muted); margin:0;">Aucune commande terminée pour le moment.</p>
+                            </div>
+                            <div id="history-load-more-wrap" class="load-more-wrap hidden">
+                                <button type="button" id="history-load-more-btn" class="btn btn-outline btn-sm">
+                                    Afficher plus
+                                </button>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+
+            <!-- Colonne droite : Grande carte Leaflet -->
+            <aside class="map-sticky-card" aria-label="Carte de livraison">
+                <div class="map-card-header">
+                    <div class="map-card-top">
+                        <h2 id="map-order-title">Zone de livraison — Paris Centre</h2>
+                        <span id="map-delivery-badge" class="status-badge hidden">EN_ATTENTE</span>
+                    </div>
+                    <p id="map-address-line" class="map-address-line">
+                        Rayon de 15 km autour du 12 Rue des Archives, Paris 4e.
+                    </p>
+                    <div id="map-progress-wrap" class="delivery-progress-wrap hidden">
+                        <div class="delivery-progress-meta">
+                            <span id="map-eta-text">Estimation : —</span>
+                            <span id="map-percent-text">0 %</span>
+                        </div>
+                        <div class="progress-track">
+                            <div id="map-progress-fill" class="progress-fill"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tracking-map" class="tracking-map-canvas"></div>
+
+                <div class="map-legend">
+                    <div class="legend-items">
+                        <span><span class="legend-dot" style="background:#181818;"></span>Restaurant</span>
+                        <span><span class="legend-dot" style="background:#c84b31;"></span>Destination</span>
+                        <span><span class="legend-dot" style="background:#16a34a;"></span>Livreur</span>
+                    </div>
+                    <span>Actualisation auto (5 s)</span>
+                </div>
+            </aside>
+        </div>
+    </main>
+
+    <footer id="site-footer"></footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7.0.0/bundles/stomp.umd.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="core.js"></script>
+    <script src="suivi.js"></script>
+</body>
+</html>

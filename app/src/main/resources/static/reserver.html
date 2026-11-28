@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Réserver une table — ejr kitchen</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header id="site-header"></header>
+
+    <main class="container reserve-page">
+        <!-- Présentation du lieu -->
+        <section class="reserve-hero-strip">
+            <div>
+                <p class="section-eyebrow">Paris 4e · Le Marais</p>
+                <h1 class="section-title">Installez-vous chez ejr kitchen</h1>
+                <p class="reserve-lead">
+                    Une salle lumineuse au cœur du Marais pour un déjeuner frais ou un dîner détendu. Cuisine ouverte, produits de saison et service continu midi &amp; soir.
+                </p>
+                <div class="place-facts">
+                    <div class="place-fact">
+                        <strong>Adresse</strong>
+                        <span>12 Rue des Archives, 75004 Paris</span>
+                    </div>
+                    <div class="place-fact">
+                        <strong>Horaires</strong>
+                        <span>Lun – Dim · 11h30 – 22h30</span>
+                    </div>
+                    <div class="place-fact">
+                        <strong>Capacité</strong>
+                        <span>40 couverts par service</span>
+                    </div>
+                    <div class="place-fact">
+                        <strong>Accès</strong>
+                        <span>Métro Hôtel de Ville (L1, L11)</span>
+                    </div>
+                </div>
+            </div>
+
+            <img class="reserve-hero-photo"
+                 src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1000&q=80"
+                 alt="Salle du restaurant EJR Kitchen à Paris Centre">
+        </section>
+
+        <!-- Formulaire de réservation + Carte Leaflet -->
+        <section class="reserve-grid">
+            <!-- Colonne gauche : Formulaire -->
+            <div class="reserve-card">
+                <div class="reserve-card-head">
+                    <h2>Réserver une table</h2>
+                    <span class="soon-pill">Salle · 40 places</span>
+                </div>
+
+                <form id="reservation-form">
+                    <div class="reserve-row-2">
+                        <div class="form-group">
+                            <label for="res-date">Date</label>
+                            <input id="res-date" type="date" class="form-input" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Nombre de couverts</label>
+                            <div class="guest-counter">
+                                <button type="button" id="guests-minus" aria-label="Retirer un couvert">−</button>
+                                <span id="guests-label">2 personnes</span>
+                                <button type="button" id="guests-plus" aria-label="Ajouter un couvert">+</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Choisissez un créneau</label>
+                        <div class="slot-group-label">Déjeuner</div>
+                        <div id="slots-lunch" class="slot-grid" role="radiogroup" aria-label="Créneaux du déjeuner"></div>
+
+                        <div class="slot-group-label">Dîner</div>
+                        <div id="slots-dinner" class="slot-grid" role="radiogroup" aria-label="Créneaux du dîner"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="res-notes">Remarque particulière (optionnel)</label>
+                        <textarea id="res-notes"
+                                  class="modal-textarea"
+                                  maxlength="255"
+                                  placeholder="Allergie, table près de la fenêtre, poussette, anniversaire..."></textarea>
+                    </div>
+
+                    <button type="submit" id="res-submit-btn" class="btn btn-primary" style="width:100%;">
+                        Confirmer ma réservation
+                    </button>
+
+                    <div id="res-feedback" class="reserve-feedback hidden" role="status"></div>
+                </form>
+            </div>
+
+            <!-- Colonne droite : Carte de localisation -->
+            <aside class="reserve-map-card" aria-label="Localisation du restaurant">
+                <div id="restaurant-map" class="reserve-map-canvas"></div>
+                <div class="reserve-map-info">
+                    <h3>EJR Kitchen — Paris Centre</h3>
+                    <p>12 Rue des Archives, 75004 Paris · À 3 min à pied de l'Hôtel de Ville et du BHV Marais.</p>
+                    <div class="access-tags">
+                        <span class="access-tag">M1 / M11 Hôtel de Ville</span>
+                        <span class="access-tag">M11 Rambuteau</span>
+                        <span class="access-tag">Terrasse &amp; Salle climatisée</span>
+                    </div>
+                </div>
+            </aside>
+        </section>
+    </main>
+
+    <footer id="site-footer"></footer>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="core.js"></script>
+    <script src="reserver.js"></script>
+</body>
+</html>
